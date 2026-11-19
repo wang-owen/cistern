@@ -1,0 +1,13 @@
+{
+  "model_type": "llama",
+  "hidden_size": 100,
+  "num_hidden_layers": 2,
+  "num_attention_heads": 4,
+  "num_key_value_heads": 2,
+  "intermediate_size": 212,
+  "vocab_size": 1003,
+  "tie_word_embeddings": false,
+  "attention_bias": false,
+  "mlp_bias": false,
+  "torch_dtype": "bfloat16"
+}

@@ -1,0 +1,15 @@
+docs/
+build/
+.cache/
+python/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+# downloaded wraps are fetched into subprojects/<dir>; keep only the .wrap files
+subprojects/*/
+subprojects/packagecache/
+subprojects/.wraplock
+# local scratch
+tmp/

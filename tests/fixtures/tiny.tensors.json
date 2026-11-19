@@ -1,0 +1,200 @@
+{
+ "schema": "cistern.tensors/1",
+ "name": "tiny",
+ "tensor_count": 21,
+ "total_params": 388300,
+ "total_bytes": 776600,
+ "source": {
+  "repo": "local/tiny",
+  "revision": "none",
+  "config": "tiny_config.json",
+  "config_sha256": "c56f09ece77d401cd07929fc51c5e3ba94cf7674667a2306e72c9af9656406c5"
+ },
+ "verified": false,
+ "tensors": [
+  {
+   "name": "model.embed_tokens.weight",
+   "shape": [
+    1003,
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 200600
+  },
+  {
+   "name": "model.layers.0.input_layernorm.weight",
+   "shape": [
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 200
+  },
+  {
+   "name": "model.layers.0.self_attn.q_proj.weight",
+   "shape": [
+    100,
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 20000
+  },
+  {
+   "name": "model.layers.0.self_attn.k_proj.weight",
+   "shape": [
+    50,
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 10000
+  },
+  {
+   "name": "model.layers.0.self_attn.v_proj.weight",
+   "shape": [
+    50,
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 10000
+  },
+  {
+   "name": "model.layers.0.self_attn.o_proj.weight",
+   "shape": [
+    100,
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 20000
+  },
+  {
+   "name": "model.layers.0.post_attention_layernorm.weight",
+   "shape": [
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 200
+  },
+  {
+   "name": "model.layers.0.mlp.gate_proj.weight",
+   "shape": [
+    212,
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 42400
+  },
+  {
+   "name": "model.layers.0.mlp.up_proj.weight",
+   "shape": [
+    212,
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 42400
+  },
+  {
+   "name": "model.layers.0.mlp.down_proj.weight",
+   "shape": [
+    100,
+    212
+   ],
+   "dtype": "bf16",
+   "bytes": 42400
+  },
+  {
+   "name": "model.layers.1.input_layernorm.weight",
+   "shape": [
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 200
+  },
+  {
+   "name": "model.layers.1.self_attn.q_proj.weight",
+   "shape": [
+    100,
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 20000
+  },
+  {
+   "name": "model.layers.1.self_attn.k_proj.weight",
+   "shape": [
+    50,
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 10000
+  },
+  {
+   "name": "model.layers.1.self_attn.v_proj.weight",
+   "shape": [
+    50,
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 10000
+  },
+  {
+   "name": "model.layers.1.self_attn.o_proj.weight",
+   "shape": [
+    100,
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 20000
+  },
+  {
+   "name": "model.layers.1.post_attention_layernorm.weight",
+   "shape": [
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 200
+  },
+  {
+   "name": "model.layers.1.mlp.gate_proj.weight",
+   "shape": [
+    212,
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 42400
+  },
+  {
+   "name": "model.layers.1.mlp.up_proj.weight",
+   "shape": [
+    212,
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 42400
+  },
+  {
+   "name": "model.layers.1.mlp.down_proj.weight",
+   "shape": [
+    100,
+    212
+   ],
+   "dtype": "bf16",
+   "bytes": 42400
+  },
+  {
+   "name": "model.norm.weight",
+   "shape": [
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 200
+  },
+  {
+   "name": "lm_head.weight",
+   "shape": [
+    1003,
+    100
+   ],
+   "dtype": "bf16",
+   "bytes": 200600
+  }
+ ]
+}

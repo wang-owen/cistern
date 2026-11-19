@@ -1,0 +1,4 @@
+option('native', type: 'boolean', value: true,
+       description: 'Add -march=native (release measurements; disable for portable builds)')
+option('owner_impl', type: 'boolean', value: false,
+       description: 'Owner code (writer/reader/async/adam) is implemented: build the seam tests (round trip, crash)')
