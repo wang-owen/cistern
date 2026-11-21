@@ -16,8 +16,10 @@ mkdir -p "$OUT"
 TARGET_DIR="$(dirname "$FIO_FILE")"
 [[ -d "$TARGET_DIR" ]] || { echo "not a directory: $TARGET_DIR" >&2; exit 2; }
 
-df -hT "$TARGET_DIR" >"$OUT/df_before.txt"
+# env first: it records the git dirty flag, and writing df_before.txt into the (tracked) results
+# directory would otherwise make the tree look dirty
 "$ROOT/tools/env.sh" --target "$TARGET_DIR" --idle-s "$IDLE_S" --out "$OUT/env.json"
+df -hT "$TARGET_DIR" >"$OUT/df_before.txt"
 
 # fio writes the bw logs into the working directory; the jobs name them write_bw.1.log / read_bw.1.log
 cd "$OUT"
