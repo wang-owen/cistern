@@ -54,3 +54,5 @@ cistern_dep = declare_dependency(link_with: libcistern, include_directories: inc
   dependencies: [liburing, json])
 
 subdir('tests')
+
+executable('cistern-baseline', files('bench/baseline_cli.cpp'), dependencies: [cistern_dep])
