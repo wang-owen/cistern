@@ -9,6 +9,7 @@
 #include <chrono>
 #include <string>
 #include <system_error>
+#include <vector>
 
 namespace cistern {
 
@@ -58,9 +59,28 @@ void check_chunk(const State& s, std::size_t chunk, bool direct) {
     }
 }
 
-// Writes every checkpointed buffer (padded length) at its offset.
+// BASELINE-ONLY PACKING, not the checkpoint file format. The baselines put the checkpointed
+// buffers back to back in checkpointed() order, each at its padded length, starting at offset 0.
+// There is no header, tensor table or checksum; the real layout is the writer's business.
+struct Slot {
+    TensorBuffer* buf;
+    std::uint64_t offset;
+};
+
+std::vector<Slot> pack(const State& s) {
+    std::vector<Slot> slots;
+    slots.reserve(s.checkpointed().size());
+    std::uint64_t off = 0;
+    for (TensorBuffer* b : s.checkpointed()) {
+        slots.push_back({b, off});
+        off += b->padded.size();
+    }
+    return slots;
+}
+
+// Writes every packed buffer (padded length) at its offset.
 void write_all(const State& s, const Fd& fd, std::size_t chunk, bool positional) {
-    for (const auto& e : s.checkpointed()) {
+    for (const auto& e : pack(s)) {
         const std::byte* p = e.buf->padded.data();
         const std::size_t total = e.buf->padded.size();
         for (std::size_t done = 0; done < total;) {
@@ -85,7 +105,7 @@ void read_all(State& s, const Fd& fd, std::size_t chunk, bool positional) {
                                  std::to_string(s.checkpoint_bytes()) + " for " +
                                  fd.path().string());
     }
-    for (const auto& e : s.checkpointed()) {
+    for (const auto& e : pack(s)) {
         std::byte* p = e.buf->padded.data();
         const std::size_t total = e.buf->padded.size();
         for (std::size_t done = 0; done < total;) {

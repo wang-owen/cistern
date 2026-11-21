@@ -6,10 +6,10 @@
 // its own allocation. Each is an anonymous mmap, so it is page aligned (which satisfies
 // statx(STATX_DIOALIGN) stx_dio_mem_align), and its length is the tensor's byte size rounded up to
 // DioAlign::unit() = max(mem align, offset align). Padding bytes are zero and are not part of the
-// payload. Checkpointed buffers are laid out contiguously in the data region, so every offset and
-// length is a multiple of the unit and any chunk-aligned O_DIRECT I/O is valid. The staging buffer
-// is the same kind of allocation, sized to the padded checkpoint and pre-faulted (MAP_POPULATE
-// plus one touch per page).
+// payload. Every padded length is a multiple of the unit, so any consumer that places buffers at
+// unit-multiple offsets gets valid O_DIRECT I/O. The generator knows nothing about a file format:
+// it assigns no file offsets. The staging buffer is the same kind of allocation, sized to the sum
+// of the padded checkpointed buffers and pre-faulted (MAP_POPULATE plus one touch per page).
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -74,12 +74,6 @@ struct TensorBuffer {
     std::span<std::byte> data() const noexcept { return padded.first(bytes); }
 };
 
-// One checkpointed buffer and its offset within the data region (padded, contiguous).
-struct CheckpointEntry {
-    TensorBuffer* buf = nullptr;
-    std::uint64_t offset = 0;
-};
-
 class State {
 public:
     State(State&&) = default;
@@ -98,12 +92,13 @@ public:
     std::span<const TensorBuffer> buffers(Role r) const noexcept {
         return by_role_[static_cast<std::size_t>(r)];
     }
-    // w, m, v per tensor, in table order; offsets are contiguous from 0.
-    std::span<const CheckpointEntry> checkpointed() const noexcept { return checkpoint_; }
+    // The checkpointed buffers: weight, exp_avg, exp_avg_sq per tensor, in table order.
+    std::span<TensorBuffer* const> checkpointed() const noexcept { return checkpoint_; }
     // Pre-faulted staging buffer of checkpoint_bytes() (empty if not requested).
     std::span<std::byte> staging() const noexcept { return {staging_.data(), staging_.size()}; }
     const DioAlign& alignment() const noexcept { return align_; }
     const PaddingReport& padding_report() const noexcept { return padding_; }
+    // Sum of the padded checkpointed buffers (data only; no header or file-format overhead).
     std::uint64_t checkpoint_bytes() const noexcept { return padding_.padded_bytes; }
     std::uint64_t payload_bytes() const noexcept { return padding_.payload_bytes; }
     std::uint64_t seed() const noexcept { return seed_; }
@@ -123,7 +118,7 @@ private:
     PaddingReport padding_;
     std::uint64_t seed_ = 0;
     std::array<std::vector<TensorBuffer>, kRoleCount> by_role_;
-    std::vector<CheckpointEntry> checkpoint_;
+    std::vector<TensorBuffer*> checkpoint_;
     AlignedBuffer staging_;
 };
 

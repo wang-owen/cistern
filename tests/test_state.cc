@@ -51,21 +51,26 @@ TEST_CASE("generated values are finite, normal, and v is positive", "[unit][stat
     }
 }
 
-TEST_CASE("padding is zero, aligned, and offsets are contiguous", "[unit][state]") {
+TEST_CASE("padding is zero and aligned, and checkpoint order is w, m, v per tensor",
+          "[unit][state]") {
     const auto t = testutil::tiny_table();
     const auto s = State::generate(t, opts(1, 2));
-    std::uint64_t expect = 0;
-    for (const auto& e : s.checkpointed()) {
-        CHECK(e.offset == expect);
-        CHECK(e.offset % 4096 == 0);
-        CHECK(e.buf->padded.size() % 4096 == 0);
-        CHECK(reinterpret_cast<std::uintptr_t>(e.buf->padded.data()) % 4096 == 0);
-        for (std::size_t i = e.buf->bytes; i < e.buf->padded.size(); ++i) {
-            REQUIRE(e.buf->padded[i] == std::byte{0});
+    std::uint64_t total = 0;
+    std::size_t k = 0;
+    for (const TensorBuffer* b : s.checkpointed()) {
+        CHECK(b->padded.size() % 4096 == 0);
+        CHECK(reinterpret_cast<std::uintptr_t>(b->padded.data()) % 4096 == 0);
+        for (std::size_t i = b->bytes; i < b->padded.size(); ++i) {
+            REQUIRE(b->padded[i] == std::byte{0});
         }
-        expect += e.buf->padded.size();
+        CHECK(b->tensor == k / 3);
+        CHECK(b->role == (k % 3 == 0   ? Role::weight
+                          : k % 3 == 1 ? Role::exp_avg
+                                       : Role::exp_avg_sq));
+        total += b->padded.size();
+        ++k;
     }
-    CHECK(expect == s.checkpoint_bytes());
+    CHECK(total == s.checkpoint_bytes());
     CHECK(s.checkpointed().size() == 3 * t.tensors.size());
 }
 

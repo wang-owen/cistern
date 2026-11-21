@@ -1,5 +1,6 @@
 #pragma once
-// Data-only baselines. They move the checkpointed buffers at their padded offsets and fsync.
+// Data-only baselines. They move the checkpointed buffers, packed back to back at their padded
+// lengths (baseline-only packing, not the checkpoint file format), and fsync.
 // There is no header, tmp file, rename or directory fsync: the commit protocol is the writer's.
 // Every number needs a baseline; these are the baselines (write and read).
 #include <cstddef>

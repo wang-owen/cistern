@@ -161,15 +161,17 @@ State State::build(const TensorTable& table, const DioAlign& align, std::uint64_
     alloc(Role::exp_avg_sq);
     if (gradients) alloc(Role::grad);
     s.checkpoint_.reserve(3 * table.tensors.size());
-    std::uint64_t off = 0;
+    std::uint64_t padded_total = 0;
     for (std::size_t i = 0; i < table.tensors.size(); ++i) {
         for (Role r : {Role::weight, Role::exp_avg, Role::exp_avg_sq}) {
             TensorBuffer* b = &s.by_role_[static_cast<std::size_t>(r)][i];
-            s.checkpoint_.push_back({b, off});
-            off += b->padded.size();
+            s.checkpoint_.push_back(b);
+            padded_total += b->padded.size();
         }
     }
-    if (staging) s.staging_ = AlignedBuffer(static_cast<std::size_t>(off), align.mem, true);
+    if (staging) {
+        s.staging_ = AlignedBuffer(static_cast<std::size_t>(padded_total), align.mem, true);
+    }
     return s;
 }
 
@@ -226,7 +228,7 @@ State State::zeros_like(const State& other, unsigned, bool check_ram) {
 
 std::uint64_t State::content_hash() const {
     std::uint64_t h = 0;
-    for (const auto& e : checkpoint_) h = mix64(h ^ hash_span(e.buf->data()));
+    for (const TensorBuffer* b : checkpoint_) h = mix64(h ^ hash_span(b->data()));
     for (const auto& b : buffers(Role::grad)) h = mix64(h ^ hash_span(b.data()));
     return h;
 }
@@ -236,10 +238,10 @@ std::optional<std::string> first_mismatch(const State& a, const State& b) {
     const auto eb = b.checkpointed();
     if (ea.size() != eb.size()) return std::string("<buffer count differs>");
     for (std::size_t i = 0; i < ea.size(); ++i) {
-        const auto da = ea[i].buf->data();
-        const auto db = eb[i].buf->data();
+        const auto da = ea[i]->data();
+        const auto db = eb[i]->data();
         if (da.size() != db.size() || std::memcmp(da.data(), db.data(), da.size()) != 0) {
-            return a.table().tensors[ea[i].buf->tensor].name + ":" + role_name(ea[i].buf->role);
+            return a.table().tensors[ea[i]->tensor].name + ":" + role_name(ea[i]->role);
         }
     }
     return std::nullopt;
