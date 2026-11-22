@@ -1,8 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "common/env.h"
 
-using namespace cistern::env;
+#include <catch2/catch_test_macros.hpp>
+
+namespace cistern {
+
+namespace env {
 
 TEST_CASE("kernel release parsing", "[unit][env]") {
     CHECK(parse_kernel_release("6.1.0-18-arm64") == KernelVersion{6, 1, 0});
@@ -29,3 +31,7 @@ TEST_CASE("meminfo parsing", "[unit][env]") {
 TEST_CASE("memlock is readable", "[unit][env]") {
     CHECK(memlock_limit_bytes() > 0);
 }
+
+}  // namespace env
+
+}  // namespace cistern

@@ -1,3 +1,5 @@
+#include "gen/state.h"
+
 #include <bit>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -5,12 +7,12 @@
 #include <cstring>
 
 #include "common/env.h"
-#include "gen/state.h"
 #include "test_util.h"
 
-using namespace cistern;
+namespace cistern {
 
 namespace {
+
 StateOptions opts(std::uint64_t seed, unsigned threads, bool grads = false) {
     StateOptions o;
     o.seed = seed;
@@ -19,6 +21,7 @@ StateOptions opts(std::uint64_t seed, unsigned threads, bool grads = false) {
     o.align_override = DioAlign{4096, 4096, false};
     return o;
 }
+
 }  // namespace
 
 TEST_CASE("generator is deterministic and thread-count independent", "[unit][state]") {
@@ -127,3 +130,5 @@ TEST_CASE("full real layout requirement is about 18 GB", "[unit][state][ram]") {
     CHECK(gb > 17.0);
     CHECK(gb < 18.5);
 }
+
+}  // namespace cistern

@@ -1,12 +1,14 @@
+#include "baselines/baselines.h"
+
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
 
-#include "baselines/baselines.h"
 #include "test_util.h"
 
-using namespace cistern;
+namespace cistern {
 
 namespace {
+
 StateOptions opts(const std::filesystem::path& dir) {
     StateOptions o;
     o.seed = 99;
@@ -14,6 +16,7 @@ StateOptions opts(const std::filesystem::path& dir) {
     o.align_dir = dir;
     return o;
 }
+
 }  // namespace
 
 TEST_CASE("buffered baseline round trip", "[unit][baselines]") {
@@ -76,3 +79,5 @@ TEST_CASE("baselines validate chunk size and file size", "[unit][baselines]") {
     State back = State::zeros_like(s);
     CHECK_THROWS(read_buffered(d.path() / "short.bin", back, 4096));
 }
+
+}  // namespace cistern

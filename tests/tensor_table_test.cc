@@ -1,15 +1,17 @@
+#include "table/tensor_table.h"
+
 #include <catch2/catch_test_macros.hpp>
 
-#include "table/tensor_table.h"
 #include "test_util.h"
 
-using cistern::TableError;
-using cistern::TensorTable;
+namespace cistern {
 
 namespace {
+
 const char* kGood = R"({"schema":"cistern.tensors/1","name":"t","tensor_count":2,"total_params":10,
  "total_bytes":20,"source":{"revision":"abc"},"verified":false,
  "tensors":[{"name":"a","shape":[2,3],"dtype":"bf16","bytes":12},{"name":"b","shape":[4],"dtype":"bf16","bytes":8}]})";
+
 }
 
 TEST_CASE("table parses a valid document", "[unit][table]") {
@@ -58,3 +60,5 @@ TEST_CASE("tiny fixture loads and has odd sizes", "[unit][table]") {
     CHECK(odd);
     CHECK(t.total_bytes < (4u << 20));
 }
+
+}  // namespace cistern

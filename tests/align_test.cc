@@ -1,9 +1,10 @@
+#include "common/align.h"
+
 #include <catch2/catch_test_macros.hpp>
 
-#include "common/align.h"
 #include "test_util.h"
 
-using namespace cistern;
+namespace cistern {
 
 TEST_CASE("round_up", "[unit][align]") {
     CHECK(round_up(0, 4096) == 0);
@@ -51,3 +52,5 @@ TEST_CASE("AlignedBuffer is page aligned and guards alignment", "[unit][align]")
     CHECK(moved.data() != nullptr);
     CHECK_THROWS_AS(AlignedBuffer(4096, page_size() * 2, false), std::invalid_argument);
 }
+
+}  // namespace cistern
