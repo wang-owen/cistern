@@ -204,26 +204,46 @@ void State::fill(unsigned threads) {
     work();
 }
 
+namespace {
+
+DioAlign resolve_align(const StateOptions& opts) {
+    return opts.align_override ? *opts.align_override : probe_dio_align(opts.align_dir);
+}
+
+void enforce_ram(const RamPlan& plan, const StateOptions& opts) {
+    if (!opts.check_ram) return;
+    env::check_free_ram(plan.required(), opts.available_ram_override
+                                             ? *opts.available_ram_override
+                                             : env::mem_available_bytes());
+}
+
+}  // namespace
+
 State State::generate(const TensorTable& table, const StateOptions& opts) {
-    const DioAlign align =
-        opts.align_override ? *opts.align_override : probe_dio_align(opts.align_dir);
-    const RamPlan plan = plan_state(table, align, opts);
-    if (opts.check_ram) {
-        env::check_free_ram(plan.required(), opts.available_ram_override
-                                                 ? *opts.available_ram_override
-                                                 : env::mem_available_bytes());
-    }
+    const DioAlign align = resolve_align(opts);
+    enforce_ram(plan_state(table, align, opts), opts);
     State s = build(table, align, opts.seed, opts.gradients, opts.staging);
     s.fill(opts.threads);
     return s;
 }
 
-State State::zeros_like(const State& other, unsigned, bool check_ram) {
+State State::zeros(const TensorTable& table, const StateOptions& opts) {
+    StateOptions o = opts;
+    o.gradients = false;
+    o.staging = false;
+    const DioAlign align = resolve_align(o);
+    enforce_ram(plan_state(table, align, o), o);
+    // Anonymous mmap pages are zero, so build() alone yields an all-zero state.
+    return build(table, align, o.seed, false, false);
+}
+
+State State::zeros_like(const State& other, unsigned threads, bool check_ram) {
     StateOptions o;
+    o.seed = other.seed_;
     o.align_override = other.align_;
-    const RamPlan plan = plan_state(other.table_, other.align_, o);
-    if (check_ram) env::check_free_ram(plan.required(), env::mem_available_bytes());
-    return build(other.table_, other.align_, other.seed_, false, false);
+    o.threads = threads;
+    o.check_ram = check_ram;
+    return zeros(other.table_, o);
 }
 
 std::uint64_t State::content_hash() const {

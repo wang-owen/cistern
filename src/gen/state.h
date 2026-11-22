@@ -82,7 +82,11 @@ public:
     State& operator=(const State&) = delete;
 
     static State generate(const TensorTable& table, const StateOptions& opts);
-    // Zero-filled state of the same shape and alignment (restore target): no grads, no staging.
+    // Zero-filled state with generate()'s shapes, padding and alignment (restore target). Uses
+    // opts' alignment, seed and RAM-check settings; ignores gradients, staging and threads: no
+    // random fill, no grads, no staging.
+    static State zeros(const TensorTable& table, const StateOptions& opts);
+    // zeros() with other's table, alignment and seed.
     static State zeros_like(const State& other, unsigned threads = 0, bool check_ram = true);
 
     const TensorTable& table() const noexcept { return table_; }

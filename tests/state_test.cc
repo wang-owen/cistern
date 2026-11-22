@@ -104,6 +104,35 @@ TEST_CASE("gradients and staging are optional and sized right", "[unit][state]")
     CHECK(first_mismatch(s, z).has_value());
 }
 
+TEST_CASE("zeros matches zeros_like(generate) in buffer sizes and alignment", "[unit][state]") {
+    const auto t = testutil::tiny_table();
+    auto o = opts(3, 2, true);
+    o.staging = true;
+    const auto z = State::zeros(t, o);
+    const auto zl = State::zeros_like(State::generate(t, o));
+    CHECK(z.alignment().mem == zl.alignment().mem);
+    CHECK(z.alignment().offset == zl.alignment().offset);
+    CHECK(z.checkpoint_bytes() == zl.checkpoint_bytes());
+    CHECK(z.payload_bytes() == zl.payload_bytes());
+    CHECK(!z.has_gradients());
+    CHECK(z.staging().empty());
+    const std::size_t mem_align = z.alignment().mem;
+    const std::size_t unit = z.alignment().unit();
+    REQUIRE(z.checkpointed().size() == zl.checkpointed().size());
+    for (std::size_t i = 0; i < z.checkpointed().size(); ++i) {
+        const TensorBuffer* a = z.checkpointed()[i];
+        const TensorBuffer* b = zl.checkpointed()[i];
+        CHECK(a->tensor == b->tensor);
+        CHECK(a->role == b->role);
+        CHECK(a->bytes == b->bytes);
+        CHECK(a->padded.size() == b->padded.size());
+        CHECK(a->padded.size() % unit == 0);
+        CHECK(reinterpret_cast<std::uintptr_t>(a->padded.data()) % mem_align == 0);
+        CHECK(reinterpret_cast<std::uintptr_t>(b->padded.data()) % mem_align == 0);
+        for (std::byte x : a->padded) REQUIRE(x == std::byte{0});
+    }
+}
+
 TEST_CASE("RAM check refuses before allocating", "[unit][state][ram]") {
     CHECK_NOTHROW(env::check_free_ram(100, 100));
     CHECK_THROWS_AS(env::check_free_ram(101, 100), env::InsufficientRam);
