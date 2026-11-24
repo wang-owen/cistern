@@ -15,21 +15,16 @@ TEST_CASE("round_up", "[unit][align]") {
 }
 
 TEST_CASE("DIO alignment fallback", "[unit][align]") {
-    bool fb = false;
-    auto a = resolve_dio_align(true, 512, 512, &fb);
-    CHECK(!fb);
+    auto a = resolve_dio_align(true, 512, 512);
     CHECK(a.mem == 512);
     CHECK(a.offset == 512);
     CHECK(a.from_statx);
-    a = resolve_dio_align(false, 0, 0, &fb);
-    CHECK(fb);
+    a = resolve_dio_align(false, 0, 0);
     CHECK(a.mem == 4096);
     CHECK(a.offset == 4096);
     CHECK(!a.from_statx);
-    resolve_dio_align(true, 0, 512, &fb);
-    CHECK(fb);
-    resolve_dio_align(true, 512, 3, &fb);  // not a power of two
-    CHECK(fb);
+    CHECK(!resolve_dio_align(true, 0, 512).from_statx);
+    CHECK(!resolve_dio_align(true, 512, 3).from_statx);  // not a power of two
     CHECK(resolve_dio_align(true, 512, 4096).unit() == 4096);
 }
 

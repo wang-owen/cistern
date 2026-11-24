@@ -1,7 +1,6 @@
 #include "gen/state.h"
 
 #include <bit>
-#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
 #include <cstring>
@@ -61,16 +60,16 @@ TEST_CASE("padding is zero and aligned, and checkpoint order is w, m, v per tens
     std::uint64_t total = 0;
     std::size_t k = 0;
     for (const TensorBuffer* b : s.checkpointed()) {
-        CHECK(b->padded.size() % 4096 == 0);
-        CHECK(reinterpret_cast<std::uintptr_t>(b->padded.data()) % 4096 == 0);
-        for (std::size_t i = b->bytes; i < b->padded.size(); ++i) {
-            REQUIRE(b->padded[i] == std::byte{0});
+        CHECK(b->padded().size() % 4096 == 0);
+        CHECK(reinterpret_cast<std::uintptr_t>(b->padded().data()) % 4096 == 0);
+        for (std::size_t i = b->bytes; i < b->padded().size(); ++i) {
+            REQUIRE(b->padded()[i] == std::byte{0});
         }
         CHECK(b->tensor == k / 3);
         CHECK(b->role == (k % 3 == 0   ? Role::weight
                           : k % 3 == 1 ? Role::exp_avg
                                        : Role::exp_avg_sq));
-        total += b->padded.size();
+        total += b->padded().size();
         ++k;
     }
     CHECK(total == s.checkpoint_bytes());
@@ -84,10 +83,7 @@ TEST_CASE("padding report math", "[unit][state]") {
     const auto r = compute_padding(t, 4096);
     CHECK(r.payload_bytes == 3 * 6096);
     CHECK(r.padded_bytes == 3 * (4096 + 4096));
-    CHECK(r.overhead_bytes == r.padded_bytes - r.payload_bytes);
-    CHECK(r.overhead_pct == Catch::Approx(100.0 * static_cast<double>(r.overhead_bytes) /
-                                          static_cast<double>(r.payload_bytes)));
-    CHECK(compute_padding(t, 1).overhead_bytes == 0);
+    CHECK(compute_padding(t, 1).padded_bytes == r.payload_bytes);
 }
 
 TEST_CASE("gradients and staging are optional and sized right", "[unit][state]") {
@@ -125,11 +121,11 @@ TEST_CASE("zeros matches zeros_like(generate) in buffer sizes and alignment", "[
         CHECK(a->tensor == b->tensor);
         CHECK(a->role == b->role);
         CHECK(a->bytes == b->bytes);
-        CHECK(a->padded.size() == b->padded.size());
-        CHECK(a->padded.size() % unit == 0);
-        CHECK(reinterpret_cast<std::uintptr_t>(a->padded.data()) % mem_align == 0);
-        CHECK(reinterpret_cast<std::uintptr_t>(b->padded.data()) % mem_align == 0);
-        for (std::byte x : a->padded) REQUIRE(x == std::byte{0});
+        CHECK(a->padded().size() == b->padded().size());
+        CHECK(a->padded().size() % unit == 0);
+        CHECK(reinterpret_cast<std::uintptr_t>(a->padded().data()) % mem_align == 0);
+        CHECK(reinterpret_cast<std::uintptr_t>(b->padded().data()) % mem_align == 0);
+        for (std::byte x : a->padded()) REQUIRE(x == std::byte{0});
     }
 }
 

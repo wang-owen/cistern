@@ -36,11 +36,15 @@ std::optional<KernelVersion> parse_kernel_release(std::string_view s) {
     return v;
 }
 
+namespace {
+
 std::string kernel_release() {
     struct utsname u{};
     if (::uname(&u) != 0) return "unknown";
     return u.release;
 }
+
+}  // namespace
 
 void require_kernel(int major, int minor) {
     const std::string rel = kernel_release();
@@ -79,9 +83,8 @@ std::optional<std::uint64_t> parse_mem_available(std::string_view text) {
     auto rest = text.substr(pos + key.size());
     while (!rest.empty() && (rest.front() == ' ' || rest.front() == '\t')) rest.remove_prefix(1);
     std::uint64_t kb = 0;
-    const auto [p, ec] = std::from_chars(rest.data(), rest.data() + rest.size(), kb);
-    if (ec != std::errc{}) return std::nullopt;
-    (void)p;
+    const auto res = std::from_chars(rest.data(), rest.data() + rest.size(), kb);
+    if (res.ec != std::errc{}) return std::nullopt;
     return kb * 1024;
 }
 

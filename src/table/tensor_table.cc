@@ -7,6 +7,8 @@
 
 namespace cistern {
 
+namespace {
+
 std::size_t dtype_size(DType d) noexcept {
     switch (d) {
         case DType::bf16:
@@ -18,24 +20,14 @@ std::size_t dtype_size(DType d) noexcept {
     return 0;
 }
 
-const char* dtype_name(DType d) noexcept {
-    switch (d) {
-        case DType::bf16:
-            return "bf16";
-        case DType::fp16:
-            return "fp16";
-        case DType::fp32:
-            return "fp32";
-    }
-    return "?";
-}
-
 DType parse_dtype(std::string_view s) {
     if (s == "bf16") return DType::bf16;
     if (s == "fp16") return DType::fp16;
     if (s == "fp32") return DType::fp32;
     throw TableError("unknown dtype '" + std::string(s) + "'");
 }
+
+}  // namespace
 
 TensorTable TensorTable::parse(std::string_view text) {
     using nlohmann::json;
@@ -92,7 +84,8 @@ TensorTable TensorTable::load(const std::filesystem::path& path) {
 }
 
 std::filesystem::path default_table_path() {
-    return std::filesystem::path(CISTERN_SOURCE_DIR) / "src" / "table" / "llama-3.2-1b.tensors.json";
+    return std::filesystem::path(CISTERN_SOURCE_DIR) / "src" / "table" /
+           "llama-3.2-1b.tensors.json";
 }
 
 }  // namespace cistern

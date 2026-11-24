@@ -12,6 +12,26 @@
 
 namespace cistern {
 
+PaddingReport compute_padding(const TensorTable& table, std::size_t unit) {
+    PaddingReport r;
+    for (const auto& t : table.tensors) {
+        r.payload_bytes += 3 * t.bytes;
+        r.padded_bytes += 3 * round_up(t.bytes, unit);
+    }
+    return r;
+}
+
+RamPlan plan_state(const TensorTable& table, const DioAlign& align, const StateOptions& opts) {
+    RamPlan p;
+    p.align = align;
+    p.padding = compute_padding(table, align.unit());
+    if (opts.gradients) p.gradient_bytes = p.padding.padded_bytes / 3;  // one grad per tensor
+    if (opts.staging) p.staging_bytes = p.padding.padded_bytes;
+    return p;
+}
+
+namespace {
+
 const char* role_name(Role r) noexcept {
     switch (r) {
         case Role::weight:
@@ -25,35 +45,6 @@ const char* role_name(Role r) noexcept {
     }
     return "?";
 }
-
-PaddingReport compute_padding(const TensorTable& table, std::size_t unit) {
-    PaddingReport r;
-    r.unit = unit;
-    for (const auto& t : table.tensors) {
-        r.payload_bytes += 3 * t.bytes;
-        r.padded_bytes += 3 * round_up(t.bytes, unit);
-    }
-    r.overhead_bytes = r.padded_bytes - r.payload_bytes;
-    r.overhead_pct = r.payload_bytes == 0 ? 0.0
-                                          : 100.0 * static_cast<double>(r.overhead_bytes) /
-                                                static_cast<double>(r.payload_bytes);
-    return r;
-}
-
-RamPlan plan_state(const TensorTable& table, const DioAlign& align, const StateOptions& opts) {
-    RamPlan p;
-    p.align = align;
-    p.padding = compute_padding(table, align.unit());
-    p.checkpoint_bytes = p.padding.padded_bytes;
-    if (opts.gradients) {
-        for (const auto& t : table.tensors) p.gradient_bytes += round_up(t.bytes, align.unit());
-    }
-    if (opts.staging) p.staging_bytes = p.checkpoint_bytes;
-    p.margin_bytes = kRamMarginBytes;
-    return p;
-}
-
-namespace {
 
 constexpr std::uint64_t kGamma = 0x9E3779B97F4A7C15ull;
 
@@ -123,57 +114,23 @@ std::uint64_t hash_span(std::span<const std::byte> s) noexcept {
     return mix64(h);
 }
 
-unsigned resolve_threads(unsigned t) {
-    if (t != 0) return t;
-    const unsigned hc = std::thread::hardware_concurrency();
-    return hc == 0 ? 1 : hc;
+// Runs f(0..n-1) on up to `threads` threads (0 = hardware concurrency), pulling indices from a
+// shared counter.
+template <class F>
+void parallel_for(std::size_t n, unsigned threads, F&& f) {
+    std::atomic<std::size_t> next{0};
+    auto work = [&] {
+        for (std::size_t i = next.fetch_add(1); i < n; i = next.fetch_add(1)) f(i);
+    };
+    if (threads == 0) threads = std::max(1u, std::thread::hardware_concurrency());
+    const auto t =
+        static_cast<unsigned>(std::min<std::size_t>(threads, std::max<std::size_t>(n, 1)));
+    std::vector<std::jthread> pool;
+    for (unsigned i = 1; i < t; ++i) pool.emplace_back(work);
+    work();
 }
 
 }  // namespace
-
-State State::build(const TensorTable& table, const DioAlign& align, std::uint64_t seed,
-                   bool gradients, bool staging) {
-    for (const auto& t : table.tensors) {
-        if (t.dtype != DType::bf16)
-            throw std::runtime_error("state generator supports bf16 only: " + t.name);
-    }
-    State s;
-    s.table_ = table;
-    s.align_ = align;
-    s.seed_ = seed;
-    s.padding_ = compute_padding(table, align.unit());
-    const std::size_t unit = align.unit();
-    auto alloc = [&](Role role) {
-        auto& v = s.by_role_[static_cast<std::size_t>(role)];
-        v.reserve(table.tensors.size());
-        for (std::size_t i = 0; i < table.tensors.size(); ++i) {
-            TensorBuffer b;
-            b.tensor = i;
-            b.role = role;
-            b.bytes = static_cast<std::size_t>(table.tensors[i].bytes);
-            b.mem = AlignedBuffer(round_up(b.bytes, unit), align.mem, false);
-            b.padded = {b.mem.data(), b.mem.size()};
-            v.push_back(std::move(b));
-        }
-    };
-    alloc(Role::weight);
-    alloc(Role::exp_avg);
-    alloc(Role::exp_avg_sq);
-    if (gradients) alloc(Role::grad);
-    s.checkpoint_.reserve(3 * table.tensors.size());
-    std::uint64_t padded_total = 0;
-    for (std::size_t i = 0; i < table.tensors.size(); ++i) {
-        for (Role r : {Role::weight, Role::exp_avg, Role::exp_avg_sq}) {
-            TensorBuffer* b = &s.by_role_[static_cast<std::size_t>(r)][i];
-            s.checkpoint_.push_back(b);
-            padded_total += b->padded.size();
-        }
-    }
-    if (staging) {
-        s.staging_ = AlignedBuffer(static_cast<std::size_t>(padded_total), align.mem, true);
-    }
-    return s;
-}
 
 void State::fill(unsigned threads) {
     struct Task {
@@ -189,40 +146,58 @@ void State::fill(unsigned threads) {
                 tasks.push_back({&b, f, std::min(n, f + kElems)});
         }
     }
-    std::atomic<std::size_t> next{0};
-    auto work = [&] {
-        for (std::size_t i = next.fetch_add(1); i < tasks.size(); i = next.fetch_add(1)) {
-            const Task& t = tasks[i];
-            fill_range(t.b->role, stream_key(seed_, t.b->tensor, t.b->role),
-                       reinterpret_cast<std::uint16_t*>(t.b->padded.data()), t.first, t.last);
+    parallel_for(tasks.size(), threads, [&](std::size_t i) {
+        const Task& t = tasks[i];
+        fill_range(t.b->role, stream_key(seed_, t.b->tensor, t.b->role),
+                   reinterpret_cast<std::uint16_t*>(t.b->mem.data()), t.first, t.last);
+    });
+}
+
+State State::allocate(const TensorTable& table, const StateOptions& opts) {
+    for (const auto& t : table.tensors) {
+        if (t.dtype != DType::bf16)
+            throw std::runtime_error("state generator supports bf16 only: " + t.name);
+    }
+    const DioAlign align =
+        opts.align_override ? *opts.align_override : probe_dio_align(opts.align_dir);
+    const RamPlan plan = plan_state(table, align, opts);
+    env::check_free_ram(plan.required(), opts.available_ram_override ? *opts.available_ram_override
+                                                                     : env::mem_available_bytes());
+    const std::size_t unit = align.unit();
+    State s;
+    s.table_ = table;
+    s.align_ = align;
+    s.seed_ = opts.seed;
+    s.padding_ = plan.padding;
+    auto alloc = [&](Role role) {
+        auto& v = s.by_role_[static_cast<std::size_t>(role)];
+        v.reserve(table.tensors.size());
+        for (std::size_t i = 0; i < table.tensors.size(); ++i) {
+            TensorBuffer b;
+            b.tensor = i;
+            b.role = role;
+            b.bytes = static_cast<std::size_t>(table.tensors[i].bytes);
+            b.mem = AlignedBuffer(round_up(b.bytes, unit), align.mem, false);
+            v.push_back(std::move(b));
         }
     };
-    const auto n = static_cast<unsigned>(
-        std::min<std::size_t>(resolve_threads(threads), std::max<std::size_t>(tasks.size(), 1)));
-    std::vector<std::jthread> pool;
-    for (unsigned i = 1; i < n; ++i) pool.emplace_back(work);
-    work();
+    alloc(Role::weight);
+    alloc(Role::exp_avg);
+    alloc(Role::exp_avg_sq);
+    if (opts.gradients) alloc(Role::grad);
+    s.checkpoint_.reserve(3 * table.tensors.size());
+    for (std::size_t i = 0; i < table.tensors.size(); ++i) {
+        for (Role r : {Role::weight, Role::exp_avg, Role::exp_avg_sq})
+            s.checkpoint_.push_back(&s.by_role_[static_cast<std::size_t>(r)][i]);
+    }
+    if (opts.staging) {
+        s.staging_ = AlignedBuffer(static_cast<std::size_t>(plan.staging_bytes), align.mem, true);
+    }
+    return s;
 }
-
-namespace {
-
-DioAlign resolve_align(const StateOptions& opts) {
-    return opts.align_override ? *opts.align_override : probe_dio_align(opts.align_dir);
-}
-
-void enforce_ram(const RamPlan& plan, const StateOptions& opts) {
-    if (!opts.check_ram) return;
-    env::check_free_ram(plan.required(), opts.available_ram_override
-                                             ? *opts.available_ram_override
-                                             : env::mem_available_bytes());
-}
-
-}  // namespace
 
 State State::generate(const TensorTable& table, const StateOptions& opts) {
-    const DioAlign align = resolve_align(opts);
-    enforce_ram(plan_state(table, align, opts), opts);
-    State s = build(table, align, opts.seed, opts.gradients, opts.staging);
+    State s = allocate(table, opts);
     s.fill(opts.threads);
     return s;
 }
@@ -231,25 +206,23 @@ State State::zeros(const TensorTable& table, const StateOptions& opts) {
     StateOptions o = opts;
     o.gradients = false;
     o.staging = false;
-    const DioAlign align = resolve_align(o);
-    enforce_ram(plan_state(table, align, o), o);
-    // Anonymous mmap pages are zero, so build() alone yields an all-zero state.
-    return build(table, align, o.seed, false, false);
+    // Anonymous mmap pages are zero.
+    return allocate(table, o);
 }
 
-State State::zeros_like(const State& other, unsigned threads, bool check_ram) {
-    StateOptions o;
-    o.seed = other.seed_;
-    o.align_override = other.align_;
-    o.threads = threads;
-    o.check_ram = check_ram;
-    return zeros(other.table_, o);
+State State::zeros_like(const State& other, StateOptions opts) {
+    opts.seed = other.seed_;
+    opts.align_override = other.align_;
+    return zeros(other.table_, opts);
 }
 
 std::uint64_t State::content_hash() const {
+    std::vector<const TensorBuffer*> bufs(checkpoint_.begin(), checkpoint_.end());
+    for (const auto& b : buffers(Role::grad)) bufs.push_back(&b);
+    std::vector<std::uint64_t> hashes(bufs.size());
+    parallel_for(bufs.size(), 0, [&](std::size_t i) { hashes[i] = hash_span(bufs[i]->data()); });
     std::uint64_t h = 0;
-    for (const TensorBuffer* b : checkpoint_) h = mix64(h ^ hash_span(b->data()));
-    for (const auto& b : buffers(Role::grad)) h = mix64(h ^ hash_span(b.data()));
+    for (const std::uint64_t x : hashes) h = mix64(h ^ x);
     return h;
 }
 
@@ -257,14 +230,19 @@ std::optional<std::string> first_mismatch(const State& a, const State& b) {
     const auto ea = a.checkpointed();
     const auto eb = b.checkpointed();
     if (ea.size() != eb.size()) return std::string("<buffer count differs>");
-    for (std::size_t i = 0; i < ea.size(); ++i) {
+    std::atomic<std::size_t> first{ea.size()};  // lowest mismatching index found so far
+    parallel_for(ea.size(), 0, [&](std::size_t i) {
+        std::size_t cur = first.load(std::memory_order_relaxed);
+        if (i >= cur) return;
         const auto da = ea[i]->data();
         const auto db = eb[i]->data();
-        if (da.size() != db.size() || std::memcmp(da.data(), db.data(), da.size()) != 0) {
-            return a.table().tensors[ea[i]->tensor].name + ":" + role_name(ea[i]->role);
+        if (da.size() == db.size() && std::memcmp(da.data(), db.data(), da.size()) == 0) return;
+        while (i < cur && !first.compare_exchange_weak(cur, i)) {
         }
-    }
-    return std::nullopt;
+    });
+    const std::size_t i = first.load();
+    if (i == ea.size()) return std::nullopt;
+    return a.table().tensors[ea[i]->tensor].name + ":" + role_name(ea[i]->role);
 }
 
 }  // namespace cistern

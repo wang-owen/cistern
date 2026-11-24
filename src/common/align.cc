@@ -23,11 +23,8 @@ bool pow2(std::uint32_t v) {
 }
 }  // namespace
 
-DioAlign resolve_dio_align(bool have_dioalign, std::uint32_t mem, std::uint32_t offset,
-                           bool* fell_back) {
-    const bool ok = have_dioalign && pow2(mem) && pow2(offset);
-    if (fell_back != nullptr) *fell_back = !ok;
-    if (!ok) return DioAlign{};
+DioAlign resolve_dio_align(bool have_dioalign, std::uint32_t mem, std::uint32_t offset) {
+    if (!have_dioalign || !pow2(mem) || !pow2(offset)) return DioAlign{};
     return DioAlign{mem, offset, true};
 }
 
@@ -54,10 +51,9 @@ DioAlign probe_dio_align(const std::filesystem::path& path) {
         ::close(tmp_fd);
         ::unlink(tmp_name.c_str());
     }
-    bool fell_back = false;
     const DioAlign a = resolve_dio_align(have, have ? sx.stx_dio_mem_align : 0,
-                                         have ? sx.stx_dio_offset_align : 0, &fell_back);
-    if (fell_back) {
+                                         have ? sx.stx_dio_offset_align : 0);
+    if (!a.from_statx) {
         std::fprintf(stderr,
                      "warning: statx(STATX_DIOALIGN) unavailable or zero for %s; "
                      "falling back to %zu-byte alignment\n",

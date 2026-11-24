@@ -1,5 +1,5 @@
 #pragma once
-// Direct-I/O alignment discovery and page-backed aligned buffers.
+// Direct-I/O alignment discovery and page-aligned buffers.
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -20,18 +20,16 @@ struct DioAlign {
     std::size_t unit() const noexcept { return mem > offset ? mem : offset; }
 };
 
-// Pure: turns the statx dio fields into a DioAlign, falling back to 4096 when unsupported,
-// zero, or not a power of two. `fell_back` (optional) reports whether the fallback was used.
-DioAlign resolve_dio_align(bool have_dioalign, std::uint32_t mem, std::uint32_t offset,
-                           bool* fell_back = nullptr);
+// Falls back to 4096 (from_statx = false) when unsupported, zero, or not a power of two.
+DioAlign resolve_dio_align(bool have_dioalign, std::uint32_t mem, std::uint32_t offset);
 
-// statx(STATX_DIOALIGN) on a file, or (for a directory) on a probe file created and removed
-// inside it. Logs a warning to stderr when falling back to 4096.
+// statx(STATX_DIOALIGN) on a file, or on a temporary probe file inside a directory. Warns on
+// stderr when falling back.
 DioAlign probe_dio_align(const std::filesystem::path& path);
 
 std::size_t page_size();
 
-// Anonymous-mmap RAII buffer (page aligned). `prefault` touches every page up front.
+// Anonymous-mmap buffer; `prefault` touches every page up front.
 class AlignedBuffer {
 public:
     AlignedBuffer() = default;

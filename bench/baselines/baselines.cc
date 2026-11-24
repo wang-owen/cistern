@@ -73,7 +73,7 @@ std::vector<Slot> pack(const State& s) {
     std::uint64_t off = 0;
     for (TensorBuffer* b : s.checkpointed()) {
         slots.push_back({b, off});
-        off += b->padded.size();
+        off += b->padded().size();
     }
     return slots;
 }
@@ -81,8 +81,8 @@ std::vector<Slot> pack(const State& s) {
 // Writes every packed buffer (padded length) at its offset.
 void write_all(const State& s, const Fd& fd, std::size_t chunk, bool positional) {
     for (const auto& e : pack(s)) {
-        const std::byte* p = e.buf->padded.data();
-        const std::size_t total = e.buf->padded.size();
+        const std::byte* p = e.buf->padded().data();
+        const std::size_t total = e.buf->padded().size();
         for (std::size_t done = 0; done < total;) {
             const std::size_t n = std::min(chunk, total - done);
             const off_t off = static_cast<off_t>(e.offset + done);
@@ -106,8 +106,8 @@ void read_all(State& s, const Fd& fd, std::size_t chunk, bool positional) {
                                  fd.path().string());
     }
     for (const auto& e : pack(s)) {
-        std::byte* p = e.buf->padded.data();
-        const std::size_t total = e.buf->padded.size();
+        std::byte* p = e.buf->padded().data();
+        const std::size_t total = e.buf->padded().size();
         for (std::size_t done = 0; done < total;) {
             const std::size_t n = std::min(chunk, total - done);
             const off_t off = static_cast<off_t>(e.offset + done);
