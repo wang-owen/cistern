@@ -130,6 +130,9 @@ TEST_CASE("layout on the real Llama table", "[unit][layout]") {
     const std::uint64_t piece_size = GENERATE(1u << 20, 8u << 20);
     const Layout l = make_layout(t, 4096, piece_size);
     check_invariants(l, t, 4096, piece_size);
+    const double gb = static_cast<double>(l.file_size - l.header_size) / 1e9;
+    CHECK(gb > 7.0);  // ~7.4 GB of padded weight + Adam moments
+    CHECK(gb < 8.0);
 }
 
 TEST_CASE("layout concrete values", "[unit][layout]") {

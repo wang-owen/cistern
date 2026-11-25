@@ -63,7 +63,7 @@ void check_chunk(const State& s, std::size_t chunk, bool direct) {
 // buffers back to back in checkpointed() order, each at its padded length, starting at offset 0.
 // There is no header, tensor table or checksum; the real layout is the writer's business.
 struct Slot {
-    TensorBuffer* buf;
+    const TensorBuffer* buf;
     std::uint64_t offset;
 };
 
@@ -71,9 +71,9 @@ std::vector<Slot> pack(const State& s) {
     std::vector<Slot> slots;
     slots.reserve(s.checkpointed().size());
     std::uint64_t off = 0;
-    for (TensorBuffer* b : s.checkpointed()) {
-        slots.push_back({b, off});
-        off += b->padded().size();
+    for (const TensorBuffer& b : s.checkpointed()) {
+        slots.push_back({&b, off});
+        off += b.padded().size();
     }
     return slots;
 }
