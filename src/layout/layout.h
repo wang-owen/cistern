@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
+#include <type_traits>
 #include <vector>
 
 #include "gen/state.h"
@@ -9,9 +11,24 @@ namespace cistern {
 
 struct TensorTable;
 
-constexpr std::uint64_t kHeaderFixedSize = 64;  // temp
-
 inline constexpr std::uint64_t kBuffersPerTensor = 3;
+
+inline constexpr char kMagic[7] = {'C', 'I', 'S', 'T', 'E', 'R', 'N'};
+inline constexpr std::uint8_t kFormatVersion = 1;
+
+struct Header {
+    char magic[7];         // kMagic
+    std::uint8_t version;  // kFormatVersion
+    std::uint32_t tensor_count;
+    std::uint32_t piece_count;  // length of the crc table that follows
+    std::uint64_t align;        // Layout::align at write time
+    std::uint64_t piece_size;   // Layout::piece_size
+    std::uint64_t file_size;    // Layout::file_size; detects truncation
+};
+static_assert(sizeof(Header) == 40, "Header has implicit padding or changed size");
+static_assert(std::is_trivially_copyable_v<Header>);
+
+inline constexpr std::uint64_t kHeaderFixedSize = sizeof(Header);
 
 struct BufferSlot {
     std::uint32_t tensor_idx = 0;  // index into TensorTable::tensors
@@ -44,5 +61,9 @@ struct Layout {
 // pieces of at most piece_size (rounded up to align). Throws std::invalid_argument on a
 // zero-byte tensor or a layout exceeding 2^32 pieces.
 Layout make_layout(const TensorTable& table, std::uint64_t align, std::uint64_t piece_size);
+
+// Fixed-size header fields for `layout`. The crc table and header crc that follow it on disk
+// are computed by the writer.
+Header make_header(const Layout& layout);
 
 }  // namespace cistern

@@ -2,10 +2,12 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <stdexcept>
 #include <utility>
 
 #include "common/align.h"
+#include "gen/state.h"
 #include "table/tensor_table.h"
 
 namespace cistern {
@@ -33,7 +35,7 @@ Layout make_layout(const TensorTable& table, std::uint64_t align, std::uint64_t 
         throw std::invalid_argument("layout exceeds 2^32 pieces");
     }
     layout.header_size =
-        round_up(kHeaderFixedSize  // replace with sizeof(HeaderFixed) once defined
+        round_up(kHeaderFixedSize                                 // header
                      + total_piece_count * sizeof(std::uint32_t)  // one crc per piece
                      + sizeof(std::uint32_t),                     // header crc
                  align);
@@ -83,6 +85,20 @@ Layout make_layout(const TensorTable& table, std::uint64_t align, std::uint64_t 
     assert(next_file_offset % align == 0);
 
     return layout;
+}
+
+Header make_header(const Layout& layout) {
+    assert(layout.buffers.size() % kBuffersPerTensor == 0);
+
+    Header header{};
+    std::memcpy(header.magic, kMagic, sizeof(kMagic));
+    header.version = kFormatVersion;
+    header.tensor_count = static_cast<std::uint32_t>(layout.buffers.size() / kBuffersPerTensor);
+    header.piece_count = static_cast<std::uint32_t>(layout.pieces.size());
+    header.align = layout.align;
+    header.piece_size = layout.piece_size;
+    header.file_size = layout.file_size;
+    return header;
 }
 
 }  // namespace cistern

@@ -1,5 +1,6 @@
 #include "layout/layout.h"
 
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <cstdint>
@@ -171,15 +172,29 @@ TEST_CASE("piece_size smaller than align becomes align", "[unit][layout]") {
     check_invariants(l, t, 4096, 1);
 }
 
+TEST_CASE("make_header mirrors the layout", "[unit][layout][header]") {
+    const auto t = table_of({10000, 100});
+    const Layout l = make_layout(t, 4096, 5000);  // unaligned piece_size
+    const Header h = make_header(l);
+
+    CHECK(std::equal(std::begin(kMagic), std::end(kMagic), std::begin(h.magic)));
+    CHECK(h.version == kFormatVersion);
+    CHECK(h.tensor_count == 2);
+    CHECK(h.piece_count == l.pieces.size());
+    CHECK(h.align == 4096);
+    CHECK(h.piece_size == 8192);  // the rounded value, not the 5000 passed in
+    CHECK(h.file_size == l.file_size);
+}
+
 TEST_CASE("header grows past one block when there are many pieces", "[unit][layout]") {
     // header_size tracks the crc table: one block for few pieces, more for many.
     const auto t = table_of({4096});
     const Layout l = make_layout(t, 4096, 4096);
     CHECK(l.header_size == 4096);
-    const Layout big = make_layout(t, 512, 512);  // 24 pieces: 64 + 96 + 4 = 164 -> 512
+    const Layout big = make_layout(t, 512, 512);  // 24 pieces: 40 + 96 + 4 = 140 -> 512
     CHECK(big.header_size == 512);
     const Layout many = make_layout(table_of({1u << 20}), 512, 512);  // 3*2048 pieces
-    CHECK(many.header_size == round_up(64 + 3 * 2048 * 4 + 4, 512));
+    CHECK(many.header_size == round_up(kHeaderFixedSize + 3 * 2048 * 4 + 4, 512));
     CHECK(many.buffers[0].file_offset == many.header_size);
     check_invariants(many, table_of({1u << 20}), 512, 512);
 }

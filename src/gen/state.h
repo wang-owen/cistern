@@ -15,6 +15,8 @@ namespace cistern {
 
 enum class Role : unsigned { weight = 0, exp_avg = 1, exp_avg_sq = 2 };
 
+constexpr unsigned kRoleCount = 3;
+
 struct StateOptions {
     std::uint64_t seed = 1234;
     std::filesystem::path align_dir = ".";  // probed with statx(STATX_DIOALIGN)
