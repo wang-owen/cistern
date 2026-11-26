@@ -1,7 +1,8 @@
 # libcistern: shared pieces (common, table, gen) plus, later, the owner's layout/writer/restore.
 inc = include_directories('.')
 
-common_sources = files('common/align.cc', 'common/env.cc')
+common_sources = files('common/align.cc', 'common/direct_file.cc', 'common/env.cc',
+                       'common/ring.cc')
 table_sources = files('table/tensor_table.cc')
 gen_sources = files('gen/state.cc')
 

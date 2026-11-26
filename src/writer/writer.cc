@@ -21,6 +21,8 @@
 
 #include "common/align.h"
 #include "common/crc32c.h"
+#include "common/direct_file.h"
+#include "common/ring.h"
 #include "gen/state.h"
 #include "layout/layout.h"
 
@@ -30,45 +32,6 @@ namespace {
 
 constexpr unsigned kQueueDepth = 16;
 constexpr unsigned kMaxRetries = 10;
-
-// Creates or truncates `file` for O_DIRECT writes.
-class DirectOutFile {
-public:
-    explicit DirectOutFile(const std::filesystem::path& file) {
-        if ((fd_ = ::open(file.c_str(), O_CREAT | O_WRONLY | O_TRUNC | O_DIRECT | O_CLOEXEC,
-                          S_IRUSR | S_IWUSR)) == -1) {
-            throw std::system_error(errno, std::generic_category(), "::open");
-        }
-    }
-    DirectOutFile(const DirectOutFile&) = delete;
-    DirectOutFile& operator=(const DirectOutFile&) = delete;
-
-    ~DirectOutFile() { ::close(fd_); }
-
-    int get() const { return fd_; }
-
-private:
-    int fd_;
-};
-
-class Ring {
-public:
-    explicit Ring() {
-        int ret = ::io_uring_queue_init(kQueueDepth, &ring_, 0);
-        if (ret < 0) {
-            throw std::system_error(-ret, std::system_category(), "io_uring_queue_init");
-        }
-    }
-    Ring(const Ring&) = delete;
-    Ring& operator=(const Ring&) = delete;
-
-    ~Ring() { ::io_uring_queue_exit(&ring_); }
-
-    struct io_uring* get() { return &ring_; }
-
-private:
-    struct io_uring ring_;
-};
 
 void try_fdatasync(int fd) {
     int ret;
@@ -100,8 +63,8 @@ void write_checkpoint(const State& state, const Layout& layout, const std::files
     assert(layout.buffers.size() == state.checkpointed().size());
 
     const std::filesystem::path path = dir / "ckpt.tmp";
-    DirectOutFile file(path);
-    Ring ring;
+    DirectFile file = DirectFile::create(path);
+    Ring ring(kQueueDepth);
 
     std::span<const TensorBuffer> checkpoint = state.checkpointed();
     const std::size_t n = layout.pieces.size();
