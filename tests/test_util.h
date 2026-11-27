@@ -5,15 +5,12 @@
 #include <filesystem>
 #include <string>
 
-#include "table/tensor_table.h"
+#include "tensor_table.h"
 
 namespace testutil {
 
 inline std::filesystem::path fixture(const std::string& name) {
     return std::filesystem::path(CISTERN_FIXTURE_DIR) / name;
-}
-inline std::filesystem::path real_table() {
-    return cistern::default_table_path();
 }
 inline cistern::TensorTable tiny_table() {
     return cistern::TensorTable::load(fixture("tiny.tensors.json"));

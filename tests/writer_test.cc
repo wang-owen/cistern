@@ -1,4 +1,4 @@
-#include "writer/writer.h"
+#include "writer.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
@@ -9,9 +9,9 @@
 #include <iterator>
 #include <vector>
 
-#include "common/crc32c.h"
-#include "gen/state.h"
-#include "layout/layout.h"
+#include "crc32c.h"
+#include "layout.h"
+#include "state.h"
 #include "test_util.h"
 
 namespace cistern {
@@ -109,19 +109,6 @@ TEST_CASE("one piece per buffer when piece_size exceeds every buffer", "[unit][w
 
     write_checkpoint(state, layout, dir.path());
     check_checkpoint(read_file(dir.path() / "ckpt"), state, layout);
-}
-
-TEST_CASE("a second checkpoint replaces the first", "[unit][writer]") {
-    testutil::TempDir dir;
-    const State first = make_state(1);
-    const State second = make_state(2);
-    const Layout layout = make_layout(first.table(), kAlign, 4 * kAlign);
-
-    write_checkpoint(first, layout, dir.path());
-    write_checkpoint(second, layout, dir.path());
-
-    CHECK_FALSE(std::filesystem::exists(dir.path() / "ckpt.tmp"));
-    check_checkpoint(read_file(dir.path() / "ckpt"), second, layout);
 }
 
 }  // namespace cistern

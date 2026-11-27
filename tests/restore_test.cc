@@ -1,4 +1,4 @@
-#include "restore/restore.h"
+#include "restore.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -10,10 +10,10 @@
 #include <format>
 #include <fstream>
 
-#include "gen/state.h"
-#include "layout/layout.h"
+#include "layout.h"
+#include "state.h"
 #include "test_util.h"
-#include "writer/writer.h"
+#include "writer.h"
 
 namespace cistern {
 

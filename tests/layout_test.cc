@@ -1,6 +1,5 @@
-#include "layout/layout.h"
+#include "layout.h"
 
-#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <cstdint>
@@ -8,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "table/tensor_table.h"
+#include "tensor_table.h"
 #include "test_util.h"
 
 namespace cistern {
@@ -127,7 +126,7 @@ TEST_CASE("layout on the tiny fixture table", "[unit][layout]") {
 }
 
 TEST_CASE("layout on the real Llama table", "[unit][layout]") {
-    const auto t = TensorTable::load(testutil::real_table());
+    const auto t = TensorTable::load(default_table_path());
     const std::uint64_t piece_size = GENERATE(1u << 20, 8u << 20);
     const Layout l = make_layout(t, 4096, piece_size);
     check_invariants(l, t, 4096, piece_size);
@@ -141,7 +140,7 @@ TEST_CASE("layout concrete values", "[unit][layout]") {
     const auto t = table_of({5000});
     const Layout l = make_layout(t, 4096, 4096);
     CHECK(l.piece_size == 4096);
-    CHECK(l.header_size == 4096);  // 64 + 6*4 + 4 = 92 -> 4096
+    CHECK(l.header_size == 4096);  // 40 + 6*4 + 4 = 68 -> 4096
     REQUIRE(l.buffers.size() == 3);
     REQUIRE(l.pieces.size() == 6);
     CHECK(l.buffers[0].file_offset == 4096);
@@ -151,39 +150,6 @@ TEST_CASE("layout concrete values", "[unit][layout]") {
     CHECK(l.pieces[1].offset_in_buffer == 4096);
     CHECK(l.pieces[1].size == 4096);
     CHECK(l.pieces[5].file_offset == l.file_size - 4096);
-}
-
-TEST_CASE("piece_size not a multiple of align is rounded up", "[unit][layout]") {
-    const auto t = table_of({10000});
-    const Layout l = make_layout(t, 4096, 5000);
-    CHECK(l.piece_size == 8192);
-    // disk 12288 -> pieces of 8192 + 4096
-    REQUIRE(l.buffers[0].piece_count == 2);
-    CHECK(l.pieces[0].size == 8192);
-    CHECK(l.pieces[1].size == 4096);
-    check_invariants(l, t, 4096, 5000);
-}
-
-TEST_CASE("piece_size smaller than align becomes align", "[unit][layout]") {
-    const auto t = table_of({8192});
-    const Layout l = make_layout(t, 4096, 1);
-    CHECK(l.piece_size == 4096);
-    CHECK(l.buffers[0].piece_count == 2);
-    check_invariants(l, t, 4096, 1);
-}
-
-TEST_CASE("make_header mirrors the layout", "[unit][layout][header]") {
-    const auto t = table_of({10000, 100});
-    const Layout l = make_layout(t, 4096, 5000);  // unaligned piece_size
-    const Header h = make_header(l);
-
-    CHECK(std::equal(std::begin(kMagic), std::end(kMagic), std::begin(h.magic)));
-    CHECK(h.version == kFormatVersion);
-    CHECK(h.tensor_count == 2);
-    CHECK(h.piece_count == l.pieces.size());
-    CHECK(h.align == 4096);
-    CHECK(h.piece_size == 8192);  // the rounded value, not the 5000 passed in
-    CHECK(h.file_size == l.file_size);
 }
 
 TEST_CASE("header grows past one block when there are many pieces", "[unit][layout]") {

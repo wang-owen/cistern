@@ -1,6 +1,2 @@
 option('native', type: 'boolean', value: true,
        description: 'Add -march=native (release measurements; disable for portable builds)')
-option('hip', type: 'feature', value: 'disabled',
-       description: 'HIP/ROCm support (M2). Disabled by default so M1 builds without ROCm')
-option('hip_arch', type: 'string', value: 'gfx1200',
-       description: 'GPU architecture passed to hipcc --offload-arch (RX 9060 XT = gfx1200)')

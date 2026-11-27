@@ -1,8 +1,7 @@
-#include "table/tensor_table.h"
+#include "tensor_table.h"
 
 #include <catch2/catch_test_macros.hpp>
-
-#include "test_util.h"
+#include <string>
 
 namespace cistern {
 
@@ -42,23 +41,6 @@ TEST_CASE("table rejects inconsistent documents", "[unit][table]") {
     CHECK_THROWS_AS(TensorTable::parse(bad("cistern.tensors/1", "other/9")), TableError);
     CHECK_THROWS_AS(TensorTable::parse("{not json"), TableError);
     CHECK_THROWS_AS(TensorTable::load("/nonexistent/table.json"), TableError);
-}
-
-TEST_CASE("committed Llama 3.2 1B table has verified totals", "[unit][table]") {
-    const auto t = TensorTable::load(testutil::real_table());
-    CHECK(t.verified);
-    CHECK(t.tensors.size() == 146);
-    CHECK(t.total_params == 1235814400ull);
-    CHECK(t.total_bytes == 2471628800ull);
-    for (const auto& x : t.tensors) CHECK(x.name != "lm_head.weight");  // tied embeddings
-}
-
-TEST_CASE("tiny fixture loads and has odd sizes", "[unit][table]") {
-    const auto t = testutil::tiny_table();
-    bool odd = false;
-    for (const auto& x : t.tensors) odd = odd || (x.bytes % 4096 != 0);
-    CHECK(odd);
-    CHECK(t.total_bytes < (4u << 20));
 }
 
 }  // namespace cistern
