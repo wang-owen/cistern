@@ -41,6 +41,7 @@ public:
 
     // weight, exp_avg, exp_avg_sq per tensor, in table order
     std::span<const TensorBuffer> checkpointed() const noexcept { return buffers_; }
+    std::span<TensorBuffer> checkpointed() noexcept { return buffers_; }
 
     // Sum of padded().size() over checkpointed()
     std::uint64_t checkpoint_bytes() const noexcept { return checkpoint_bytes_; }
