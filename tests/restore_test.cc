@@ -155,12 +155,44 @@ TEST_CASE("restore_checkpoint rejects a damaged checkpoint", "[unit][restore]") 
                             Catch::Matchers::ContainsSubstring("align 0 is not a power of two"));
     }
 
+    SECTION("piece_size that does not match the piece count") {
+        // 0x3000 -> 0x2000: still in range, but make_layout now yields more pieces than the
+        // header records. make_header is compared before the header crc, so no crc fixup is
+        // needed to reach that check.
+        corrupt_byte(ckpt, 25, 0x10);
+        REQUIRE_THROWS_WITH(
+            restore_checkpoint(dir.path(), dst),
+            Catch::Matchers::ContainsSubstring("header does not match the layout for this table"));
+    }
+
     SECTION("align not a power of two") {
         corrupt_byte(ckpt, 17, 0x20);  // 0x1000 -> 0x3000
         REQUIRE_THROWS_WITH(
             restore_checkpoint(dir.path(), dst),
             Catch::Matchers::ContainsSubstring("align 12288 is not a power of two"));
     }
+}
+
+TEST_CASE("restore_checkpoint rejects a state built from another table", "[unit][restore]") {
+    testutil::TempDir dir;
+    const State src = make_state(7);
+    write_checkpoint(src, make_layout(src.table(), kAlign, 3 * kAlign), dir.path());
+
+    const TensorTable other = TensorTable::parse(R"({
+        "schema": "cistern.tensors/1", "name": "other", "verified": false,
+        "tensor_count": 1, "total_params": 1000, "total_bytes": 2000,
+        "tensors": [{"name": "w", "shape": [10, 100], "dtype": "bf16", "bytes": 2000}]
+    })");
+    StateOptions o;
+    o.threads = 2;
+    o.align_override = DioAlign{kAlign, kAlign, false};
+    State dst = State::generate(other, o);
+
+    // The layout is rebuilt from dst's table, so a different table shows up as a header
+    // mismatch (tensor_count, piece_count, file_size) before any data is read.
+    REQUIRE_THROWS_WITH(
+        restore_checkpoint(dir.path(), dst),
+        Catch::Matchers::ContainsSubstring("header does not match the layout for this table"));
 }
 
 }  // namespace cistern
