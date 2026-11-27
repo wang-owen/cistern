@@ -78,4 +78,5 @@ endif
 
 subdir('src')
 subdir('bench/baselines')
+subdir('bench/harness')
 subdir('tests')
