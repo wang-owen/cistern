@@ -108,13 +108,6 @@ void Writer::write_impl(const Layout& layout, const std::filesystem::path& dir) 
 
     const std::filesystem::path path = dir / "ckpt.tmp";
     DirectFile file = DirectFile::create(path);
-    int falloc_ret;
-    while ((falloc_ret = ::fallocate(file.get(), 0, 0, static_cast<off_t>(layout.file_size))) ==
-               -1 &&
-           errno == EINTR);
-    if (falloc_ret == -1 && errno != EOPNOTSUPP) {
-        throw std::system_error(errno, std::generic_category(), "::fallocate");
-    }
     Ring& ring = *ring_;
 
     std::span<const TensorBuffer> checkpoint = state.checkpointed();
