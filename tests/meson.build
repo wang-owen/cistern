@@ -7,6 +7,16 @@ unit_exe = executable('cistern-unit',
   cpp_args: fixture_args, dependencies: [cistern_dep, baselines_dep, catch2])
 test('unit', unit_exe, suite: 'unit', timeout: 120)
 
+# Separate executable: crash/hooks.cc interposes libc and liburing calls.
+crash_exe = executable('cistern-crash-test',
+  files('crash/crash_test.cc', 'crash/hooks.cc'),
+  include_directories: include_directories('.'),
+  cpp_args: fixture_args,
+  # std::filesystem::rename calls rename() from inside libstdc++.so
+  link_args: cxx.get_supported_link_arguments('-Wl,--export-dynamic-symbol=rename'),
+  dependencies: [cistern_dep, catch2, cxx.find_library('dl', required: false)])
+test('crash', crash_exe, suite: 'crash', timeout: 300)
+
 py = find_program('python3', required: false)
 if py.found()
   test('tensor-table-py', py,
