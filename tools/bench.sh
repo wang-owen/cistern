@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The two benchmarks, under the same conditions: the fio write ceiling (8 GiB sequential write,
-# 1 MiB blocks, QD16, io_uring, O_DIRECT, fixed buffers, fallocate) and checkpoint write
+# 1 MiB blocks, QD16, io_uring, O_DIRECT, fixed buffers, no preallocation) and checkpoint write
 # throughput (cistern-bench-write). Each round runs fio, then the writer, each after IDLE_S of
 # idle (and fstrim when passwordless sudo works). Round 0 is a discarded warmup.
 # Writes results/ceiling.txt and results/writer.txt (GB/s per round, warmup first and marked) and
@@ -61,7 +61,7 @@ for ((r = 0; r <= RUNS; r++)); do
     tag=""; ((r == 0)) && tag=" warmup"
     settle
     ceiling="$(fio --name=write --filename="$FIO_FILE" --rw=write --bs=1M --size=8G \
-        --ioengine=io_uring --iodepth=16 --direct=1 --fixedbufs=1 --fallocate=native \
+        --ioengine=io_uring --iodepth=16 --direct=1 --fixedbufs=1 --fallocate=none \
         --output-format=json | jq '.jobs[0].write.bw_bytes / 1e9')"
     printf '%.3f%s\n' "$ceiling" "$tag" >>"$OUT/ceiling.txt"
     settle
