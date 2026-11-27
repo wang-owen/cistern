@@ -2,7 +2,8 @@ fixture_args = ['-DCISTERN_FIXTURE_DIR="' + meson.current_source_dir() + '/fixtu
 
 unit_exe = executable('cistern-unit',
   files('tensor_table_test.cc', 'align_test.cc', 'state_test.cc',
-        'env_test.cc', 'baselines_test.cc', 'crc32c_test.cc', 'layout_test.cc'),
+        'env_test.cc', 'baselines_test.cc', 'crc32c_test.cc', 'layout_test.cc', 'writer_test.cc',
+        'restore_test.cc'),
   cpp_args: fixture_args, dependencies: [cistern_dep, baselines_dep, catch2])
 test('unit', unit_exe, suite: 'unit', timeout: 120)
 
