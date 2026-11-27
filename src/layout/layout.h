@@ -24,6 +24,12 @@ struct Header {
     std::uint64_t align;        // Layout::align at write time
     std::uint64_t piece_size;   // Layout::piece_size
     std::uint64_t file_size;    // Layout::file_size; detects truncation
+
+    bool operator!=(const Header& rhs) const {
+        return (std::memcmp(magic, rhs.magic, sizeof(kMagic)) != 0 || version != rhs.version ||
+                tensor_count != rhs.tensor_count || piece_count != rhs.piece_count ||
+                align != rhs.align || piece_size != rhs.piece_size || file_size != rhs.file_size);
+    }
 };
 static_assert(sizeof(Header) == 40, "Header has implicit padding or changed size");
 static_assert(std::is_trivially_copyable_v<Header>);
