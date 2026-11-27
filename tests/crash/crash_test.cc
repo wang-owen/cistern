@@ -224,7 +224,14 @@ TEST_CASE("crash hooks see every call write_checkpoint makes", "[crash][hooks]")
 }
 
 TEST_CASE("checkpoint survives a kill at each step", "[crash][deterministic]") {
-    const unsigned submits = count_of(count_calls(), Fn::submit_and_wait);
+    // The writer reaps completions as they arrive, so how many submit_and_wait calls a write
+    // makes varies from run to run. Each call reaps at most a full queue, so
+    // ceil(pieces / queue depth) calls happen in every run: kill points up to it always fire.
+    constexpr unsigned kWriterQueueDepth = 16;  // kQueueDepth in src/writer/writer.cc
+    const std::size_t pieces = make_layout(states().front().table(), kAlign, kAlign).pieces.size();
+    const auto submits = static_cast<unsigned>((pieces + kWriterQueueDepth - 1) / kWriterQueueDepth);
+    REQUIRE(submits >= 3);  // distinct first, middle, last
+    REQUIRE(count_of(count_calls(), Fn::submit_and_wait) >= submits);
     const std::vector<std::pair<Fn, unsigned>> calls = {
         {Fn::submit_and_wait, 1},
         {Fn::submit_and_wait, (submits + 1) / 2},

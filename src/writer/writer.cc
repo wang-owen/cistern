@@ -68,7 +68,7 @@ void write_checkpoint(const State& state, const Layout& layout, const std::files
 
     std::span<const TensorBuffer> checkpoint = state.checkpointed();
     const std::size_t n = layout.pieces.size();
-    unsigned batch = 0;
+    unsigned in_flight = 0;  // submitted (or prepared) writes without a completion yet
     std::deque<std::size_t> pending(n);
     std::iota(pending.begin(), pending.end(), 0);
     std::vector<unsigned> num_retries(n, 0);
@@ -93,7 +93,7 @@ void write_checkpoint(const State& state, const Layout& layout, const std::files
         ::io_uring_prep_write(sqe, file.get(), src + written[i],
                               static_cast<unsigned>(p.size - written[i]),
                               p.file_offset + written[i]);
-        ++batch;
+        ++in_flight;
     };
 
     auto requeue_no_progress = [&](std::size_t i) {
@@ -104,19 +104,21 @@ void write_checkpoint(const State& state, const Layout& layout, const std::files
         pending.push_back(i);
     };
 
+    // Waits for one completion, not the whole batch, so the caller refills the queue as soon as
+    // a slot frees up and the drive never drains while the next pieces are checksummed.
     auto submit_and_process = [&] {
-        int ret = ::io_uring_submit_and_wait(ring.get(), batch);
+        int ret = ::io_uring_submit_and_wait(ring.get(), 1);
         if (ret < 0) {
             throw std::system_error(-ret, std::system_category(), "::io_uring_submit");
         }
 
         struct io_uring_cqe* cqe;
         unsigned head, seen = 0;
-        batch = 0;
         io_uring_for_each_cqe(ring.get(), head, cqe) {
             const auto i = static_cast<std::size_t>(cqe->user_data);
             const int res = cqe->res;
             ++seen;
+            --in_flight;
 
             if (res == -EINTR) {
                 requeue_no_progress(i);
@@ -142,8 +144,8 @@ void write_checkpoint(const State& state, const Layout& layout, const std::files
         ::io_uring_cq_advance(ring.get(), seen);
     };
 
-    while (!pending.empty()) {
-        while (!pending.empty() && batch < kQueueDepth) {
+    while (!pending.empty() || in_flight > 0) {
+        while (!pending.empty() && in_flight < kQueueDepth) {
             prep_piece(pending.front());
             pending.pop_front();
         }
