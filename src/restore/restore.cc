@@ -16,6 +16,7 @@
 #include <numeric>
 #include <span>
 #include <stdexcept>
+#include <string>
 #include <system_error>
 #include <vector>
 
@@ -55,11 +56,16 @@ void aligned_pread(int fd, std::size_t unit, void* out, std::size_t out_size, st
         }
         const std::size_t next = round_down(end, unit);
         if (next == bytes_read) {
-            throw std::runtime_error("invalid checkpoint file");
+            throw std::runtime_error("invalid checkpoint file: short read");
         }
         bytes_read = next;
     }
     std::memcpy(out, buf.data() + skip, out_size);
+}
+
+// Every format error starts with "invalid checkpoint file" so callers can match on it.
+std::runtime_error invalid_checkpoint(const std::string& reason) {
+    return std::runtime_error("invalid checkpoint file: " + reason);
 }
 
 }  // namespace
@@ -80,14 +86,26 @@ void restore_checkpoint(const std::filesystem::path& dir, State& state) {
 
     // verify header; bounding align and piece_size by the real file size keeps
     // round_up in make_layout from overflowing
-    if (std::memcmp(header.magic, kMagic, sizeof(kMagic)) != 0 || header.file_size != file_size ||
-        header.align == 0 || (header.align & (header.align - 1)) != 0 || header.align % unit != 0 ||
-        header.align > file_size || header.piece_size == 0 || header.piece_size > file_size) {
-        throw std::runtime_error("invalid checkpoint file");
+    if (std::memcmp(header.magic, kMagic, sizeof(kMagic)) != 0) {
+        throw invalid_checkpoint("bad magic");
+    }
+    if (header.file_size != file_size) {
+        throw invalid_checkpoint(
+            std::format("header says {} bytes, file has {}", header.file_size, file_size));
+    }
+    if (header.align == 0 || (header.align & (header.align - 1)) != 0) {
+        throw invalid_checkpoint(std::format("align {} is not a power of two", header.align));
+    }
+    if (header.align % unit != 0 || header.align > file_size) {
+        throw invalid_checkpoint(std::format(
+            "align {} incompatible with device unit {} or file size", header.align, unit));
+    }
+    if (header.piece_size == 0 || header.piece_size > file_size) {
+        throw invalid_checkpoint(std::format("piece_size {} out of range", header.piece_size));
     }
     Layout layout = make_layout(state.table(), header.align, header.piece_size);
     if (make_header(layout) != header) {
-        throw std::runtime_error("invalid checkpoint file");
+        throw invalid_checkpoint("header does not match the layout for this table");
     }
 
     // validate crcs
@@ -98,7 +116,7 @@ void restore_checkpoint(const std::filesystem::path& dir, State& state) {
     std::uint32_t stored;
     std::memcpy(&stored, hdr.data() + sizeof(Header) + crc_bytes, sizeof(stored));
     if (crc32c(hdr.data(), sizeof(Header) + crc_bytes) != stored) {
-        throw std::runtime_error("invalid checkpoint file");
+        throw invalid_checkpoint("header crc mismatch");
     }
     std::memcpy(crcs.data(), hdr.data() + sizeof(Header), crc_bytes);
 
