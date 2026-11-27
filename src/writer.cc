@@ -2,6 +2,7 @@
 
 #include <fcntl.h>
 #include <liburing.h>
+#include <sys/uio.h>
 #include <unistd.h>
 
 #include <cassert>
@@ -58,13 +59,63 @@ void fsync_dir(const std::filesystem::path& dir) {
 
 }  // namespace
 
+Writer::Writer(const State& state) : state_(state) {
+    reset_ring();
+}
+
+void Writer::reset_ring() {
+    ring_.reset();
+    ring_.emplace(kQueueDepth);
+    fixed_ = false;
+    register_buffers();
+}
+
+void Writer::register_buffers() {
+    const auto bufs = state_.checkpointed();
+    std::vector<iovec> iovecs;
+    iovecs.reserve(bufs.size());
+    for (const TensorBuffer& b : bufs) {
+        iovecs.push_back({b.padded().data(), b.padded().size()});
+    }
+
+    const int ret = ::io_uring_register_buffers(ring_->get(), iovecs.data(),
+                                                static_cast<unsigned>(iovecs.size()));
+    if (ret < 0) {
+        std::fprintf(stderr, "warning: io_uring_register_buffers: %s; using plain writes\n",
+                     std::strerror(-ret));
+        return;
+    }
+    fixed_ = true;
+}
+
+void Writer::write(const Layout& layout, const std::filesystem::path& dir) {
+    try {
+        write_impl(layout, dir);
+    } catch (...) {
+        reset_ring();
+        throw;
+    }
+}
+
 void write_checkpoint(const State& state, const Layout& layout, const std::filesystem::path& dir) {
+    Writer(state).write(layout, dir);
+}
+
+void Writer::write_impl(const Layout& layout, const std::filesystem::path& dir) {
+    const State& state = state_;
     assert(layout.align == state.alignment().unit());
     assert(layout.buffers.size() == state.checkpointed().size());
 
     const std::filesystem::path path = dir / "ckpt.tmp";
     DirectFile file = DirectFile::create(path);
-    Ring ring(kQueueDepth);
+    int falloc_ret;
+    while ((falloc_ret = ::fallocate(file.get(), 0, 0, static_cast<off_t>(layout.file_size))) ==
+               -1 &&
+           errno == EINTR);
+    if (falloc_ret == -1 && errno != EOPNOTSUPP) {
+        throw std::system_error(errno, std::generic_category(), "::fallocate");
+    }
+    Ring& ring = *ring_;
 
     std::span<const TensorBuffer> checkpoint = state.checkpointed();
     const std::size_t n = layout.pieces.size();
@@ -90,9 +141,15 @@ void write_checkpoint(const State& state, const Layout& layout, const std::files
             checksums[i] = crc32c(src, p.size);
         }
 
-        ::io_uring_prep_write(sqe, file.get(), src + written[i],
-                              static_cast<unsigned>(p.size - written[i]),
-                              p.file_offset + written[i]);
+        const auto len = static_cast<unsigned>(p.size - written[i]);
+        const std::uint64_t off = p.file_offset + written[i];
+        if (fixed_) {
+            // slot == buffer_idx: register_buffers() registers checkpointed() in order
+            ::io_uring_prep_write_fixed(sqe, file.get(), src + written[i], len, off,
+                                        static_cast<int>(p.buffer_idx));
+        } else {
+            ::io_uring_prep_write(sqe, file.get(), src + written[i], len, off);
+        }
         ++in_flight;
     };
 

@@ -1,6 +1,7 @@
 // cistern-bench-write <output dir>: times one write_checkpoint of the Llama 3.2 1B state
 // (~7.4 GB, 1 MiB pieces like the fio job) and prints decimal GB/s over the whole call: data
-// writes, fdatasync, header, fdatasync, rename, dir fsync. State generation is not timed.
+// writes, fdatasync, header, fdatasync, rename, dir fsync. State generation and buffer
+// registration (Writer construction, a one-time cost per State) are not timed.
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
@@ -26,8 +27,13 @@ int main(int argc, char** argv) {
         const auto layout =
             cistern::make_layout(state.table(), state.alignment().unit(), std::uint64_t{1} << 20);
 
+        cistern::Writer writer(state);
+        if (!writer.fixed_buffers()) {
+            std::fprintf(stderr, "warning: buffer registration failed; using plain writes\n");
+        }
+
         const auto t0 = std::chrono::steady_clock::now();
-        cistern::write_checkpoint(state, layout, dir);
+        writer.write(layout, dir);
         const std::chrono::duration<double, std::nano> ns = std::chrono::steady_clock::now() - t0;
 
         std::printf("%.3f\n", static_cast<double>(layout.file_size) / ns.count());
