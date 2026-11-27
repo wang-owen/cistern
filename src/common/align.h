@@ -12,6 +12,10 @@ constexpr std::size_t round_up(std::size_t v, std::size_t a) noexcept {
     return (v + a - 1) / a * a;  // a > 0
 }
 
+constexpr std::size_t round_down(std::size_t v, std::size_t a) noexcept {
+    return v / a * a;  // a > 0
+}
+
 struct DioAlign {
     std::size_t mem = kFallbackDioAlign;     // required memory alignment
     std::size_t offset = kFallbackDioAlign;  // required file offset / length alignment
