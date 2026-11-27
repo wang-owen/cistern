@@ -8,7 +8,7 @@ gen_sources = files('gen/state.cc')
 
 # Owner code goes here as it is written, e.g.
 #   'layout/layout.cc', 'writer/writer.cc', 'restore/restore.cc'
-owner_sources = files('layout/layout.cc', 'writer/writer.cc')
+owner_sources = files('layout/layout.cc', 'writer/writer.cc', 'restore/restore.cc')
 
 libcistern = static_library('cistern',
   common_sources, table_sources, gen_sources, owner_sources,
