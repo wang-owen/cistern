@@ -10,7 +10,7 @@
 #include "state.h"
 #include "tensor_table.h"
 
-namespace cistern {
+namespace pitstop {
 
 Layout make_layout(const TensorTable& table, std::uint64_t align, std::uint64_t piece_size) {
     assert(align != 0 && piece_size != 0);
@@ -101,4 +101,4 @@ Header make_header(const Layout& layout) {
     return header;
 }
 
-}  // namespace cistern
+}  // namespace pitstop

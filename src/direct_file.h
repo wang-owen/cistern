@@ -2,7 +2,7 @@
 // O_DIRECT file descriptors with an explicit open mode.
 #include <filesystem>
 
-namespace cistern {
+namespace pitstop {
 
 class DirectFile {
 public:
@@ -24,4 +24,4 @@ private:
     int fd_ = -1;
 };
 
-}  // namespace cistern
+}  // namespace pitstop

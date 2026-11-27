@@ -1,5 +1,5 @@
 {
- "schema": "cistern.tensors/1",
+ "schema": "pitstop.tensors/1",
  "name": "tiny",
  "tensor_count": 21,
  "total_params": 388300,

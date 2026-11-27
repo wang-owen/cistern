@@ -2,7 +2,7 @@
 // Owning wrapper around an io_uring instance.
 #include <liburing.h>
 
-namespace cistern {
+namespace pitstop {
 
 class Ring {
 public:
@@ -17,4 +17,4 @@ private:
     struct io_uring ring_;
 };
 
-}  // namespace cistern
+}  // namespace pitstop

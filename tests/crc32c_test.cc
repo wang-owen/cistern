@@ -2,7 +2,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-namespace cistern {
+namespace pitstop {
 
 TEST_CASE("basic", "[unit][crc32c]") {
     constexpr std::string_view s = "123456789";
@@ -10,4 +10,4 @@ TEST_CASE("basic", "[unit][crc32c]") {
     CHECK(crc32c(bytes.data(), bytes.size()) == 0xE3069283u);
 }
 
-}  // namespace cistern
+}  // namespace pitstop

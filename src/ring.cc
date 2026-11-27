@@ -2,7 +2,7 @@
 
 #include <system_error>
 
-namespace cistern {
+namespace pitstop {
 
 Ring::Ring(unsigned entries) {
     const int ret = ::io_uring_queue_init(entries, &ring_, 0);
@@ -15,4 +15,4 @@ Ring::~Ring() {
     ::io_uring_queue_exit(&ring_);
 }
 
-}  // namespace cistern
+}  // namespace pitstop

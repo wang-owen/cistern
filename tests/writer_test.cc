@@ -14,7 +14,7 @@
 #include "state.h"
 #include "test_util.h"
 
-namespace cistern {
+namespace pitstop {
 
 namespace {
 
@@ -111,4 +111,4 @@ TEST_CASE("one piece per buffer when piece_size exceeds every buffer", "[unit][w
     check_checkpoint(read_file(dir.path() / "ckpt"), state, layout);
 }
 
-}  // namespace cistern
+}  // namespace pitstop

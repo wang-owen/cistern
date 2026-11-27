@@ -11,7 +11,7 @@
 #include "align.h"
 #include "tensor_table.h"
 
-namespace cistern {
+namespace pitstop {
 
 enum class Role : unsigned { weight = 0, exp_avg = 1, exp_avg_sq = 2 };
 
@@ -68,4 +68,4 @@ private:
 // "<tensor>:<role>" of the first checkpointed buffer whose payload differs
 std::optional<std::string> first_mismatch(const State& a, const State& b);
 
-}  // namespace cistern
+}  // namespace pitstop

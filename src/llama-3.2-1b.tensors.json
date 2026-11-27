@@ -1,5 +1,5 @@
 {
- "schema": "cistern.tensors/1",
+ "schema": "pitstop.tensors/1",
  "name": "llama-3.2-1b",
  "tensor_count": 146,
  "total_params": 1235814400,

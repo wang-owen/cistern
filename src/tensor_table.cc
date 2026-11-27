@@ -5,7 +5,7 @@
 #include <nlohmann/json.hpp>
 #include <set>
 
-namespace cistern {
+namespace pitstop {
 
 namespace {
 
@@ -33,8 +33,8 @@ TensorTable TensorTable::parse(std::string_view text) {
     using nlohmann::json;
     try {
         const json j = json::parse(text);
-        if (j.value("schema", "") != "cistern.tensors/1") {
-            throw TableError("unsupported or missing schema (expected cistern.tensors/1)");
+        if (j.value("schema", "") != "pitstop.tensors/1") {
+            throw TableError("unsupported or missing schema (expected pitstop.tensors/1)");
         }
         TensorTable t;
         t.name = j.at("name").get<std::string>();
@@ -84,7 +84,7 @@ TensorTable TensorTable::load(const std::filesystem::path& path) {
 }
 
 std::filesystem::path default_table_path() {
-    return std::filesystem::path(CISTERN_SOURCE_DIR) / "src" / "llama-3.2-1b.tensors.json";
+    return std::filesystem::path(PITSTOP_SOURCE_DIR) / "src" / "llama-3.2-1b.tensors.json";
 }
 
-}  // namespace cistern
+}  // namespace pitstop

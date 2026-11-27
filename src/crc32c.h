@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <cstring>
 
-namespace cistern {
+namespace pitstop {
 
 inline std::uint32_t crc32c(const std::byte* data, std::size_t length) {
     std::uint64_t crc = 0xFFFFFFFF;
@@ -21,4 +21,4 @@ inline std::uint32_t crc32c(const std::byte* data, std::size_t length) {
     return ~c;
 }
 
-}  // namespace cistern
+}  // namespace pitstop

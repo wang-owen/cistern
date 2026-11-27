@@ -1,4 +1,4 @@
-# cistern
+# pitstop
 
 Checkpoint writer for ML training state, using io_uring and O_DIRECT on NVMe.
 

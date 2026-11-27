@@ -7,7 +7,7 @@
 
 #include "state.h"
 
-namespace cistern {
+namespace pitstop {
 
 struct TensorTable;
 
@@ -72,4 +72,4 @@ Layout make_layout(const TensorTable& table, std::uint64_t align, std::uint64_t 
 // are computed by the writer.
 Header make_header(const Layout& layout);
 
-}  // namespace cistern
+}  // namespace pitstop

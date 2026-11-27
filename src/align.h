@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <filesystem>
 
-namespace cistern {
+namespace pitstop {
 
 inline constexpr std::size_t kFallbackDioAlign = 4096;
 
@@ -53,4 +53,4 @@ private:
     std::size_t map_bytes_ = 0;
 };
 
-}  // namespace cistern
+}  // namespace pitstop

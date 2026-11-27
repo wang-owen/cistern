@@ -15,7 +15,7 @@
 #include "test_util.h"
 #include "writer.h"
 
-namespace cistern {
+namespace pitstop {
 
 namespace {
 
@@ -179,7 +179,7 @@ TEST_CASE("restore_checkpoint rejects a state built from another table", "[unit]
     write_checkpoint(src, make_layout(src.table(), kAlign, 3 * kAlign), dir.path());
 
     const TensorTable other = TensorTable::parse(R"({
-        "schema": "cistern.tensors/1", "name": "other", "verified": false,
+        "schema": "pitstop.tensors/1", "name": "other", "verified": false,
         "tensor_count": 1, "total_params": 1000, "total_bytes": 2000,
         "tensors": [{"name": "w", "shape": [10, 100], "dtype": "bf16", "bytes": 2000}]
     })");
@@ -195,4 +195,4 @@ TEST_CASE("restore_checkpoint rejects a state built from another table", "[unit]
         Catch::Matchers::ContainsSubstring("header does not match the layout for this table"));
 }
 
-}  // namespace cistern
+}  // namespace pitstop

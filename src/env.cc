@@ -6,7 +6,7 @@
 #include <sstream>
 #include <string>
 
-namespace cistern::env {
+namespace pitstop::env {
 
 void check_free_ram(std::uint64_t required, std::uint64_t available) {
     if (required > available) {
@@ -38,4 +38,4 @@ std::uint64_t mem_available_bytes() {
     return *v;
 }
 
-}  // namespace cistern::env
+}  // namespace pitstop::env

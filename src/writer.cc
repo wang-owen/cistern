@@ -27,7 +27,7 @@
 #include "ring.h"
 #include "state.h"
 
-namespace cistern {
+namespace pitstop {
 
 namespace {
 
@@ -242,4 +242,4 @@ void Writer::write_impl(const Layout& layout, const std::filesystem::path& dir) 
     fsync_dir(dir);
 }
 
-}  // namespace cistern
+}  // namespace pitstop

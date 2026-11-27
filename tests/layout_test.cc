@@ -10,7 +10,7 @@
 #include "tensor_table.h"
 #include "test_util.h"
 
-namespace cistern {
+namespace pitstop {
 
 namespace {
 
@@ -196,4 +196,4 @@ TEST_CASE("single-byte tensors with align 1", "[unit][layout][edge]") {
     check_invariants(l, t, 1, 1);
 }
 
-}  // namespace cistern
+}  // namespace pitstop

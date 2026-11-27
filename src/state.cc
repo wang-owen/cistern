@@ -10,7 +10,7 @@
 
 #include "env.h"
 
-namespace cistern {
+namespace pitstop {
 
 namespace {
 
@@ -193,4 +193,4 @@ std::optional<std::string> first_mismatch(const State& a, const State& b) {
     return a.table().tensors[ea[i].tensor].name + ":" + role_name(ea[i].role);
 }
 
-}  // namespace cistern
+}  // namespace pitstop

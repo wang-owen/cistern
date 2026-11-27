@@ -1,4 +1,4 @@
-// cistern-bench-write <output dir>: times one write_checkpoint of the Llama 3.2 1B state
+// pitstop-bench-write <output dir>: times one write_checkpoint of the Llama 3.2 1B state
 // (~7.4 GB, 1 MiB pieces like the fio job) and prints decimal GB/s over the whole call: data
 // writes, fdatasync, header, fdatasync, rename, dir fsync. State generation and buffer
 // registration (Writer construction, a one-time cost per State) are not timed.
@@ -20,14 +20,14 @@ int main(int argc, char** argv) {
     }
     const std::filesystem::path dir = argv[1];
     try {
-        cistern::StateOptions opts;
+        pitstop::StateOptions opts;
         opts.align_dir = dir;
-        const auto state = cistern::State::generate(
-            cistern::TensorTable::load(cistern::default_table_path()), opts);
+        const auto state = pitstop::State::generate(
+            pitstop::TensorTable::load(pitstop::default_table_path()), opts);
         const auto layout =
-            cistern::make_layout(state.table(), state.alignment().unit(), std::uint64_t{1} << 20);
+            pitstop::make_layout(state.table(), state.alignment().unit(), std::uint64_t{1} << 20);
 
-        cistern::Writer writer(state);
+        pitstop::Writer writer(state);
         if (!writer.fixed_buffers()) {
             std::fprintf(stderr, "warning: buffer registration failed; using plain writes\n");
         }

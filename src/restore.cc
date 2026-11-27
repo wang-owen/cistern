@@ -27,7 +27,7 @@
 #include "ring.h"
 #include "state.h"
 
-namespace cistern {
+namespace pitstop {
 
 namespace {
 
@@ -215,4 +215,4 @@ void restore_checkpoint(const std::filesystem::path& dir, State& state) {
     }
 }
 
-}  // namespace cistern
+}  // namespace pitstop

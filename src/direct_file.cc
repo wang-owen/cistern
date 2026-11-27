@@ -7,7 +7,7 @@
 #include <system_error>
 #include <utility>
 
-namespace cistern {
+namespace pitstop {
 
 namespace {
 int open_or_throw(const std::filesystem::path& file, int flags) {
@@ -41,4 +41,4 @@ DirectFile& DirectFile::operator=(DirectFile&& o) noexcept {
     return *this;
 }
 
-}  // namespace cistern
+}  // namespace pitstop

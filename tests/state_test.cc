@@ -5,7 +5,7 @@
 
 #include "test_util.h"
 
-namespace cistern {
+namespace pitstop {
 
 namespace {
 
@@ -51,4 +51,4 @@ TEST_CASE("padding is zero and aligned, and checkpoint order is w, m, v per tens
     CHECK(s.checkpointed().size() == 3 * t.tensors.size());
 }
 
-}  // namespace cistern
+}  // namespace pitstop

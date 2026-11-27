@@ -5,7 +5,7 @@
 
 #include "ring.h"
 
-namespace cistern {
+namespace pitstop {
 
 class State;
 struct Layout;
@@ -34,4 +34,4 @@ private:
 // Prefer a Writer when checkpointing the same State repeatedly
 void write_checkpoint(const State& state, const Layout& layout, const std::filesystem::path& dir);
 
-}  // namespace cistern
+}  // namespace pitstop

@@ -1,4 +1,4 @@
-project('cistern', 'cpp',
+project('pitstop', 'cpp',
   version: '0.1.0',
   meson_version: '>=1.3',
   default_options: [
@@ -23,7 +23,7 @@ endif
 if get_option('native')
   add_project_arguments('-march=native', language: 'cpp')
 endif
-add_project_arguments('-DCISTERN_SOURCE_DIR="' + meson.project_source_root() + '"', language: 'cpp')
+add_project_arguments('-DPITSTOP_SOURCE_DIR="' + meson.project_source_root() + '"', language: 'cpp')
 
 liburing = dependency('liburing', version: '>=2.5')
 

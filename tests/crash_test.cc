@@ -33,7 +33,7 @@
 #include "test_util.h"
 #include "writer.h"
 
-namespace cistern {
+namespace pitstop {
 
 namespace {
 
@@ -208,7 +208,7 @@ unsigned count_of(const crashtest::HitCounts& counts, Fn fn) {
 }
 
 unsigned random_iterations() {
-    const char* env = std::getenv("CISTERN_CRASH_ITERS");
+    const char* env = std::getenv("PITSTOP_CRASH_ITERS");
     return env != nullptr ? static_cast<unsigned>(std::stoul(env)) : 100u;
 }
 
@@ -314,4 +314,4 @@ TEST_CASE("checkpoint survives kills at random times", "[crash][random]") {
     }
 }
 
-}  // namespace cistern
+}  // namespace pitstop

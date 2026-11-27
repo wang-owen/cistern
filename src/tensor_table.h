@@ -1,5 +1,5 @@
 #pragma once
-// Tensor table loaded from a cistern.tensors/1 JSON document; "source" records where it came from.
+// Tensor table loaded from a pitstop.tensors/1 JSON document; "source" records where it came from.
 #include <cstdint>
 #include <filesystem>
 #include <stdexcept>
@@ -7,7 +7,7 @@
 #include <string_view>
 #include <vector>
 
-namespace cistern {
+namespace pitstop {
 
 class TableError : public std::runtime_error {
 public:
@@ -39,4 +39,4 @@ struct TensorTable {
 // <source dir>/src/llama-3.2-1b.tensors.json
 std::filesystem::path default_table_path();
 
-}  // namespace cistern
+}  // namespace pitstop

@@ -15,7 +15,7 @@
 #include <system_error>
 #include <utility>
 
-namespace cistern {
+namespace pitstop {
 
 namespace {
 bool pow2(std::uint32_t v) {
@@ -34,7 +34,7 @@ DioAlign probe_dio_align(const std::filesystem::path& path) {
     std::string tmp_name;
     int tmp_fd = -1;
     if (std::filesystem::is_directory(path, ec)) {
-        tmp_name = (path / ".cistern-probe-XXXXXX").string();
+        tmp_name = (path / ".pitstop-probe-XXXXXX").string();
         tmp_fd = ::mkstemp(tmp_name.data());
         if (tmp_fd < 0) {
             std::fprintf(stderr,
@@ -109,4 +109,4 @@ AlignedBuffer& AlignedBuffer::operator=(AlignedBuffer&& o) noexcept {
     return *this;
 }
 
-}  // namespace cistern
+}  // namespace pitstop

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The two benchmarks, under the same conditions: the fio write ceiling (8 GiB sequential write,
 # 1 MiB blocks, QD16, io_uring, O_DIRECT, fixed buffers, no preallocation) and checkpoint write
-# throughput (cistern-bench-write). Each round runs fio, then the writer, each after IDLE_S of
+# throughput (pitstop-bench-write). Each round runs fio, then the writer, each after IDLE_S of
 # idle (and fstrim when passwordless sudo works). Round 0 is a discarded warmup.
 # Writes results/ceiling.txt and results/writer.txt (GB/s per round, warmup first and marked) and
 # results/env.json (machine, drive and git state). Report the median with min/max; differences
@@ -12,10 +12,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TARGET="${TARGET:-/mnt/nvme}"
 IDLE_S="${IDLE_S:-30}"
 RUNS="${RUNS:-3}"
-WRITER="$ROOT/build-release/tools/cistern-bench-write"
+WRITER="$ROOT/build-release/tools/pitstop-bench-write"
 OUT="$ROOT/results"
 FIO_FILE="$TARGET/fio.tmp"
-WDIR="$TARGET/cistern-bench"
+WDIR="$TARGET/pitstop-bench"
 [[ -x "$WRITER" ]] || { echo "build first: ninja -C build-release" >&2; exit 2; }
 [[ -d "$TARGET" ]] || { echo "not a directory: $TARGET" >&2; exit 2; }
 trim=false; sudo -n fstrim --version >/dev/null 2>&1 && trim=true

@@ -3,11 +3,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <string>
 
-namespace cistern {
+namespace pitstop {
 
 namespace {
 
-const char* kGood = R"({"schema":"cistern.tensors/1","name":"t","tensor_count":2,"total_params":10,
+const char* kGood = R"({"schema":"pitstop.tensors/1","name":"t","tensor_count":2,"total_params":10,
  "total_bytes":20,"source":{"revision":"abc"},"verified":false,
  "tensors":[{"name":"a","shape":[2,3],"dtype":"bf16","bytes":12},{"name":"b","shape":[4],"dtype":"bf16","bytes":8}]})";
 
@@ -38,9 +38,9 @@ TEST_CASE("table rejects inconsistent documents", "[unit][table]") {
                     TableError);
     CHECK_THROWS_AS(TensorTable::parse(bad("\"name\":\"b\"", "\"name\":\"a\"")), TableError);
     CHECK_THROWS_AS(TensorTable::parse(bad("\"bf16\"", "\"int3\"")), TableError);
-    CHECK_THROWS_AS(TensorTable::parse(bad("cistern.tensors/1", "other/9")), TableError);
+    CHECK_THROWS_AS(TensorTable::parse(bad("pitstop.tensors/1", "other/9")), TableError);
     CHECK_THROWS_AS(TensorTable::parse("{not json"), TableError);
     CHECK_THROWS_AS(TensorTable::load("/nonexistent/table.json"), TableError);
 }
 
-}  // namespace cistern
+}  // namespace pitstop
